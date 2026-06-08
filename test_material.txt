@@ -1,0 +1,62 @@
+Python Programming Basics
+
+Python is a high-level, interpreted programming language known for its clear syntax and readability. It is widely used in web development, data science, artificial intelligence, and automation.
+
+Variables
+
+A variable in Python is a named container that stores a value. Unlike many other languages, Python does not require you to declare a variable type explicitly. Python infers the type automatically based on the assigned value.
+
+x = 10          # integer
+name = "Alice"  # string
+pi = 3.14       # float
+is_active = True  # boolean
+
+Variables can be reassigned at any time, and their type can change with each assignment. Python uses dynamic typing, meaning type checking happens at runtime rather than compile time. Variable names must start with a letter or underscore and cannot contain spaces.
+
+Functions
+
+A function is a reusable block of code that performs a specific task. Functions are defined using the def keyword, followed by the function name and parentheses containing any parameters.
+
+def greet(name):
+    return "Hello, " + name
+
+result = greet("Alice")
+print(result)  # Output: Hello, Alice
+
+Functions help avoid code repetition and make programs easier to read and maintain. Python also supports default parameter values, keyword arguments, and functions that return multiple values using tuples. Functions can be nested inside other functions, and Python supports first-class functions, meaning functions can be passed as arguments to other functions.
+
+Loops
+
+Loops allow a block of code to be executed repeatedly. Python provides two main loop types: the for loop and the while loop.
+
+The for loop iterates over a sequence such as a list, string, or range:
+
+for i in range(5):
+    print(i)  # prints 0 through 4
+
+The while loop runs as long as a condition remains true:
+
+count = 0
+while count < 5:
+    count += 1
+
+Python also provides break to exit a loop early and continue to skip the current iteration and move to the next one. List comprehensions offer a concise way to create lists using a single line loop expression.
+
+Classes
+
+A class is a blueprint for creating objects. It bundles data and behavior together. Classes are defined using the class keyword.
+
+class Animal:
+    def __init__(self, name, species):
+        self.name = name
+        self.species = species
+
+    def describe(self):
+        return f"{self.name} is a {self.species}"
+
+dog = Animal("Rex", "dog")
+print(dog.describe())  # Rex is a dog
+
+The __init__ method is the constructor and runs automatically when a new object is created. Self refers to the current instance. Python supports inheritance, allowing a class to extend another class and reuse its methods and attributes. This promotes code reuse and models real-world relationships naturally.
+
+Together, variables, functions, loops, and classes form the foundation of Python programming and are essential concepts every developer must master.

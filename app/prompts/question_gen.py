@@ -50,19 +50,23 @@ def build_question_gen_prompt(
 
     schema_example = json.dumps(
         {
-            "question_text": "string",
-            "question_type": " | ".join(q_types),
-            "difficulty": difficulty,
-            "options": [
-                {"label": "A", "text": "string", "is_correct": False},
-                {"label": "B", "text": "string", "is_correct": True},
-                {"label": "C", "text": "string", "is_correct": False},
-                {"label": "D", "text": "string", "is_correct": False},
-            ],
-            "correct_answer": "string",
-            "explanation": "string",
-            "source_chunk": "exact quote from material (max 40 words)",
-            "topic_tag": "string",
+            "questions": [
+                {
+                    "question_text": "string",
+                    "question_type": " | ".join(q_types),
+                    "difficulty": difficulty,
+                    "options": [
+                        {"label": "A", "text": "string", "is_correct": False},
+                        {"label": "B", "text": "string", "is_correct": True},
+                        {"label": "C", "text": "string", "is_correct": False},
+                        {"label": "D", "text": "string", "is_correct": False},
+                    ],
+                    "correct_answer": "string",
+                    "explanation": "string",
+                    "source_chunk": "exact quote from material (max 40 words)",
+                    "topic_tag": "string",
+                }
+            ]
         },
         indent=2,
     )
@@ -97,14 +101,16 @@ FIELD DEFINITIONS
 that directly supports this question
 - topic_tag: a short label (1–4 words) naming the concept being tested
 
-EXAMPLE ELEMENT SHAPE
+OUTPUT FORMAT
+Return a JSON object with a single key "questions" whose value is an array of \
+exactly {num_questions} question object(s) matching the shape below.
 {schema_example}
 
 STRICT RULES
-1. Respond with ONLY a valid JSON array — no markdown fences, no prose, no keys outside the array.
+1. Respond with ONLY a valid JSON object with the "questions" key — no markdown fences, no prose.
 2. Do NOT invent facts, figures, or claims that are not present in the study material.
 3. Every question must be answerable solely from the provided context.
 4. Distribute question types as evenly as possible across the {num_questions} question(s).
 5. The source_chunk must be a real excerpt from the material, not paraphrased.
 
-Output the JSON array now."""
+Output the JSON object now."""

@@ -4,7 +4,7 @@ from uuid import uuid4
 from fastapi import HTTPException
 
 from app.core.llm import call_llm
-from app.core.vector_store import get_or_create_store, search
+from app.core.vector_store import get_chunks_by_doc_id, get_or_create_store, search
 from app.prompts.question_gen import build_question_gen_prompt
 from app.schemas.quiz import (
     Difficulty,
@@ -19,20 +19,13 @@ from app.schemas.quiz import (
 quiz_sessions: dict[str, dict] = {}
 
 _CONTEXT_SEPARATOR = "\n\n---\n\n"
-_DEFAULT_QUERY = "key concepts and important ideas"
-_SEARCH_K = 20  # fetch more candidates so we can filter by doc_id
+_MAX_CONTEXT_CHUNKS = 10
 
 
 async def generate_quiz(request: QuizGenerateRequest) -> QuizResponse:
     store = get_or_create_store()
 
-    query = request.topic or _DEFAULT_QUERY
-    candidates = search(store, query, k=_SEARCH_K)
-
-    doc_chunks = [
-        c for c in candidates
-        if c["metadata"].get("doc_id") == request.doc_id
-    ]
+    doc_chunks = get_chunks_by_doc_id(store, request.doc_id)
 
     if not doc_chunks:
         raise HTTPException(
@@ -41,7 +34,7 @@ async def generate_quiz(request: QuizGenerateRequest) -> QuizResponse:
                    "Ingest the document before generating a quiz.",
         )
 
-    context = _CONTEXT_SEPARATOR.join(c["text"] for c in doc_chunks)
+    context = _CONTEXT_SEPARATOR.join(c["text"] for c in doc_chunks[:_MAX_CONTEXT_CHUNKS])
 
     prompt = build_question_gen_prompt(
         context=context,
@@ -82,18 +75,16 @@ async def generate_quiz(request: QuizGenerateRequest) -> QuizResponse:
 
 
 def _parse_question_list(raw: str) -> list[dict]:
-    """Parse LLM output into a list of raw question dicts.
-
-    The LLM uses json_object response_format so it may wrap the array in an
-    object key (e.g. {"questions": [...]}).  This handles both cases.
-    """
     parsed = json.loads(raw)
     if isinstance(parsed, list):
         return parsed
-    # Find the first list value in the object
-    for value in parsed.values():
-        if isinstance(value, list):
-            return value
+    if isinstance(parsed, dict):
+        # Prefer explicit "questions" key; fall back to first list-typed value
+        if "questions" in parsed and isinstance(parsed["questions"], list):
+            return parsed["questions"]
+        for value in parsed.values():
+            if isinstance(value, list) and value and isinstance(value[0], dict) and "question_text" in value[0]:
+                return value
     raise ValueError(f"Could not locate question list in LLM response: {raw[:200]}")
 
 

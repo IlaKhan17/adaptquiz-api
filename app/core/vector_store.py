@@ -31,3 +31,13 @@ def search(store: FAISS, query: str, k: int = 5) -> list[dict]:
         }
         for doc, score in results
     ]
+
+
+def get_chunks_by_doc_id(store: FAISS, doc_id: str) -> list[dict]:
+    """Return all stored chunks for a specific doc_id by walking the docstore directly."""
+    chunks = []
+    for doc in store.docstore._dict.values():
+        if doc.metadata.get("doc_id") == doc_id:
+            chunks.append({"text": doc.page_content, "metadata": doc.metadata})
+    chunks.sort(key=lambda c: c["metadata"].get("chunk_index", 0))
+    return chunks
