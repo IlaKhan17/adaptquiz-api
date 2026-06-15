@@ -19,4 +19,7 @@ async def call_llm(prompt: str, temperature: float = 0.3) -> str:
         temperature=temperature,
         response_format={"type": "json_object"},
     )
-    return response.choices[0].message.content
+    content = response.choices[0].message.content
+    if content is None:
+        raise ValueError("LLM returned an empty response")
+    return content

@@ -1,18 +1,18 @@
 # AdaptQuiz API
 
-Turn any study material into adaptive quizzes with AI-graded feedback.
+> Upload any study material. Get AI-generated adaptive questions and rubric-based evaluation — via a production REST API.
 
 ---
 
 ## What It Does
 
-AdaptQuiz transforms static study documents into interactive, AI-powered quizzes in five steps:
+AdaptQuiz turns any static document into a fully interactive, AI-powered quiz session in five stages:
 
-1. **Ingest** — Upload a PDF or plain-text file. The API extracts the text, splits it into overlapping chunks, embeds each chunk as a vector, and stores it in a local FAISS index.
-2. **Retrieve** — When a quiz is requested, all chunks for that document are fetched directly from the vector store using the document ID — no guesswork, no missed chunks.
-3. **Generate** — The retrieved context is passed to GPT-4o with a structured prompt specifying difficulty, question types (MCQ, short answer, true/false, fill-in-the-blank), and count. The model returns a validated JSON object of questions.
-4. **Evaluate** — Students submit answers to the grading endpoint. GPT-4o scores each answer against a three-criterion rubric (Accuracy, Completeness, Terminology) with partial credit, returning a percentage score, per-criterion feedback, improvement tips, and knowledge-gap tags.
-5. **Report** — The session report endpoint aggregates all answers into an overall score, letter grade, top knowledge gaps, and a personalised study recommendation.
+1. **Upload** — Send a PDF or plain-text file to the ingest endpoint. The API extracts the raw text, splits it into overlapping chunks, and embeds each chunk as a dense vector stored in a local FAISS index.
+2. **Retrieve** — When a quiz is requested, all chunks belonging to that document are fetched directly from the vector store by document ID — ensuring nothing is missed regardless of how large the store grows.
+3. **Generate** — The retrieved context is injected into a structured GPT-4o prompt that specifies difficulty level, question types (MCQ, short answer, true/false, fill-in-the-blank), and question count. The model returns a validated JSON object of fully formed questions with correct answers and explanations.
+4. **Evaluate** — The student submits an answer. GPT-4o acts as a judge and scores it against a three-criterion rubric: **Accuracy**, **Completeness**, and **Terminology** — with partial credit where deserved. The response includes a percentage score, per-criterion feedback, an improvement tip, and knowledge-gap tags.
+5. **Report** — The session report endpoint aggregates every answered question into an overall score, a letter grade (A+ to Needs Improvement), the top knowledge gaps ranked by frequency, and a personalised study recommendation.
 
 ---
 
@@ -21,315 +21,266 @@ AdaptQuiz transforms static study documents into interactive, AI-powered quizzes
 | Technology | Purpose |
 |---|---|
 | **FastAPI** | Async REST API framework with automatic OpenAPI / Swagger docs |
-| **Uvicorn** | ASGI server for running the FastAPI application |
-| **OpenAI GPT-4o** | Quiz generation and AI-graded answer evaluation |
-| **LangChain** | Orchestration layer for the RAG pipeline |
+| **GPT-4o** | Question generation and AI-graded answer evaluation |
 | **FAISS** | Local vector store for fast similarity search — no external database needed |
+| **LangChain** | RAG pipeline orchestration — chunking, embedding, retrieval |
 | **sentence-transformers** | Local CPU embeddings (`all-MiniLM-L6-v2`) — zero embedding API cost |
 | **pypdf** | PDF text extraction |
-| **python-docx** | DOCX text extraction |
-| **SQLAlchemy 2 + Alembic** | Database ORM and schema migrations |
 | **Pydantic v2** | Request / response validation and settings management |
-| **pytest + pytest-asyncio** | Async test suite |
 
 ---
 
 ## AI Concepts Used
 
-| Concept | How It Is Applied |
-|---|---|
-| **Retrieval-Augmented Generation (RAG)** | Documents are chunked and stored as vectors in FAISS. At quiz-time the relevant chunks are retrieved by document ID and injected into the LLM prompt as grounded context, preventing hallucination. |
-| **Vector Embeddings** | Each text chunk is encoded into a dense 384-dimensional vector using `all-MiniLM-L6-v2` running locally. Embeddings power semantic retrieval from the FAISS index at zero API cost. |
-| **Structured Outputs** | GPT-4o is called with `response_format: json_object` and a detailed schema prompt, guaranteeing parseable JSON with no markdown fences or extra prose — making downstream parsing reliable. |
-| **Prompt Engineering** | Separate, versioned prompt templates handle question generation and answer evaluation. Each prompt encodes difficulty guidance, question-type rules, field definitions, and strict output constraints. |
-| **LLM-as-Judge Evaluation** | Rather than string-matching, GPT-4o grades student answers against a three-criterion rubric with partial credit — the same technique used in RLHF reward modelling and modern AI evaluation pipelines. |
+- **RAG (Retrieval-Augmented Generation)** — Documents are stored as vectors in FAISS and retrieved at quiz-time to ground every question in source material, eliminating hallucination.
+- **Vector embeddings and similarity search** — Each chunk is encoded into a 384-dimensional vector using a local sentence-transformer model. Retrieval is done by fetching all vectors belonging to a given document ID.
+- **Structured outputs with JSON mode** — GPT-4o is called with `response_format: json_object` and an explicit schema prompt, guaranteeing parseable, schema-conformant output on every call.
+- **Prompt engineering for education domain** — Separate prompt templates for question generation and answer grading encode difficulty taxonomy, question-type rules, field definitions, and strict output constraints tuned for educational assessment.
+- **LLM-as-judge evaluation with rubric scoring** — Rather than string-matching, GPT-4o evaluates free-text student answers against a three-criterion rubric with partial credit — the same technique used in RLHF reward modelling and AI evaluation research.
+- **Knowledge gap analysis** — Each evaluation response carries `knowledge_gap_tags` that are aggregated at the session level, ranked by frequency, and surfaced in the final report alongside a targeted study recommendation.
 
 ---
 
 ## Quick Start
 
-### Prerequisites
-
-- Python 3.11+
-- An OpenAI API key
-
-### Setup
+**Prerequisites:** Python 3.11+, an OpenAI API key.
 
 ```bash
 # 1. Clone the repository
 git clone https://github.com/your-username/adaptquiz-api.git
 cd adaptquiz-api
 
-# 2. Create and activate a virtual environment
+# 2. Create a virtual environment
 python -m venv venv
 
-# Windows
+# 3. Activate it
+#    Windows:
 venv\Scripts\activate
-
-# macOS / Linux
+#    macOS / Linux:
 source venv/bin/activate
 
-# 3. Install dependencies
+# 4. Install dependencies
 pip install -r requirements.txt
 
-# 4. Configure environment variables
+# 5. Create your .env file
 cp .env.example .env
-# Open .env and set your key:
+# Add your OpenAI key inside .env:
 #   OPENAI_API_KEY=sk-...
 
-# 5. Start the server
+# 6. Start the server
 uvicorn app.main:app --reload
 ```
 
-The API is live at **http://localhost:8000**.  
-Interactive docs (Swagger UI) at **http://localhost:8000/docs**.
+API live at **`http://localhost:8000`** · Swagger UI at **`http://localhost:8000/docs`**
 
 ---
 
 ## API Endpoints
 
-| Method | Endpoint | Description | Example Body |
-|---|---|---|---|
-| `GET` | `/` | API name and docs URL | — |
-| `GET` | `/api/v1/health` | Health check | — |
-| `POST` | `/api/v1/ingest` | Upload and index a PDF or TXT file | `multipart/form-data` |
-| `POST` | `/api/v1/quiz/generate` | Generate a quiz from an ingested document | `{"doc_id", "difficulty", "num_questions", "question_types"}` |
-| `GET` | `/api/v1/quiz/{quiz_id}` | Retrieve a previously generated quiz | — |
-| `POST` | `/api/v1/eval/answer` | Submit a student answer for AI grading | `{"session_id", "question_id", "student_answer"}` |
-| `GET` | `/api/v1/session/{session_id}/report` | Full performance report for a session | — |
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/ingest` | Upload a PDF or TXT file — extracts, chunks, embeds, and indexes |
+| `POST` | `/api/v1/quiz/generate` | Generate an adaptive quiz from an ingested document |
+| `GET` | `/api/v1/quiz/{quiz_id}` | Retrieve a previously generated quiz by ID |
+| `POST` | `/api/v1/eval/answer` | Submit a student answer for AI rubric grading |
+| `GET` | `/api/v1/session/{session_id}/report` | Get the full performance report for a session |
+| `GET` | `/api/v1/health` | Health check |
 
 ---
 
-## Full Example Flow
+## Demo Flow
 
-The five commands below walk through the entire pipeline end-to-end.
+Five curl commands — full pipeline from upload to report.
 
-### Step 1 — Ingest a document
+### 1. Ingest a document
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/ingest \
-  -F "file=@study_notes.txt;type=text/plain" \
-  -F "subject=programming"
+  -F "file=@notes.pdf;type=application/pdf" \
+  -F "subject=machine-learning"
 ```
 
 ```json
 {
-  "doc_id": "2a6555d8-6966-47f7-8feb-a8369ff863b0",
-  "filename": "study_notes.txt",
-  "subject": "programming",
-  "chunks_created": 5,
-  "total_chars": 2922
+  "doc_id": "98f5aa0b-5559-4adf-bfc7-c730511c254a",
+  "filename": "notes.pdf",
+  "subject": "machine-learning",
+  "chunks_created": 9,
+  "total_chars": 5604
 }
 ```
 
-### Step 2 — Generate a quiz
+### 2. Generate a quiz
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/quiz/generate \
   -H "Content-Type: application/json" \
   -d '{
-    "doc_id": "2a6555d8-6966-47f7-8feb-a8369ff863b0",
-    "difficulty": "easy",
-    "num_questions": 3,
-    "question_types": ["mcq", "short_answer"]
+    "doc_id": "98f5aa0b-5559-4adf-bfc7-c730511c254a",
+    "difficulty": "medium",
+    "num_questions": 4,
+    "question_types": ["mcq", "short_answer", "true_false"]
   }'
 ```
 
 ```json
 {
-  "quiz_id": "d681b607-9c9d-4ddb-aefd-8935e5f5e1f5",
-  "session_id": "d05ff336-81ff-4262-a383-840d3b938a29",
-  "difficulty": "easy",
-  "total_questions": 3,
+  "quiz_id": "285c1d91-ebc5-43ee-90ea-b19c2126dfb2",
+  "session_id": "f765e443-eaea-4c94-bc60-094c8c0a71ef",
+  "difficulty": "medium",
+  "total_questions": 4,
   "questions": [
     {
-      "question_id": "0d3ae932-261b-4d04-995c-fd1bb1bb72af",
-      "question_text": "What is the output of greet(\"Alice\")?",
+      "question_id": "b054ea8f-2b96-4c4d-8eb6-a172d5213f4f",
+      "question_text": "Which of the following is a characteristic of supervised learning?",
       "question_type": "mcq",
       "options": [
-        { "label": "A", "text": "Hello, Alice", "is_correct": true },
-        { "label": "B", "text": "Hello, World", "is_correct": false },
-        { "label": "C", "text": "Alice",        "is_correct": false },
-        { "label": "D", "text": "Error",         "is_correct": false }
+        { "label": "A", "text": "The model works with unlabelled data.",               "is_correct": false },
+        { "label": "B", "text": "The model is trained on labelled examples.",          "is_correct": true  },
+        { "label": "C", "text": "The model receives a reward signal for actions.",     "is_correct": false },
+        { "label": "D", "text": "The model uses spatial filters to process images.",   "is_correct": false }
       ],
-      "correct_answer": "Hello, Alice",
-      "topic_tag": "functions"
+      "correct_answer": "The model is trained on labelled examples.",
+      "topic_tag": "Supervised Learning"
     }
   ]
 }
 ```
 
-### Step 3 — Retrieve a quiz by ID
+### 3. Retrieve a quiz by ID
 
 ```bash
-curl http://localhost:8000/api/v1/quiz/d681b607-9c9d-4ddb-aefd-8935e5f5e1f5
+curl http://localhost:8000/api/v1/quiz/285c1d91-ebc5-43ee-90ea-b19c2126dfb2
 ```
 
-Returns the same `QuizResponse` as step 2.
+Returns the full `QuizResponse` including all questions and the `session_id`.
 
-### Step 4 — Submit an answer for grading
+### 4. Submit an answer for grading
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/eval/answer \
   -H "Content-Type: application/json" \
   -d '{
-    "session_id":     "d05ff336-81ff-4262-a383-840d3b938a29",
-    "question_id":    "0d3ae932-261b-4d04-995c-fd1bb1bb72af",
-    "student_answer": "Hello, Alice"
+    "session_id":     "f765e443-eaea-4c94-bc60-094c8c0a71ef",
+    "question_id":    "b054ea8f-2b96-4c4d-8eb6-a172d5213f4f",
+    "student_answer": "The model is trained on labelled examples."
   }'
 ```
 
 ```json
 {
-  "question_id": "0d3ae932-261b-4d04-995c-fd1bb1bb72af",
   "is_correct": true,
   "score": 1.0,
   "score_percentage": 100,
   "rubric_feedback": [
     { "criterion": "Accuracy",     "score": 1.0, "comment": "The student's answer is factually correct." },
-    { "criterion": "Completeness", "score": 1.0, "comment": "Addresses all parts of the question." },
-    { "criterion": "Terminology",  "score": 1.0, "comment": "Uses appropriate terminology correctly." }
+    { "criterion": "Completeness", "score": 1.0, "comment": "The student's answer fully addresses the question." },
+    { "criterion": "Terminology",  "score": 1.0, "comment": "The student uses domain-appropriate terminology correctly." }
   ],
-  "correct_answer": "Hello, Alice",
-  "detailed_explanation": "The greet() function concatenates 'Hello, ' with the name argument and returns the result.",
-  "improvement_tip": "Continue practising Python functions to reinforce your skills.",
+  "correct_answer": "The model is trained on labelled examples.",
+  "improvement_tip": "Review the key characteristics of supervised, unsupervised, and reinforcement learning.",
   "knowledge_gap_tags": []
 }
 ```
 
-### Step 5 — Get the session report
+### 5. Get the session report
 
 ```bash
-curl http://localhost:8000/api/v1/session/d05ff336-81ff-4262-a383-840d3b938a29/report
+curl http://localhost:8000/api/v1/session/f765e443-eaea-4c94-bc60-094c8c0a71ef/report
 ```
 
 ```json
 {
-  "session_id": "d05ff336-81ff-4262-a383-840d3b938a29",
-  "total_questions": 3,
-  "answered": 1,
-  "overall_score": 1.0,
-  "grade": "A+",
-  "knowledge_gaps": [],
-  "recommendation": "Excellent work! You have a strong grasp of the material.",
-  "question_breakdown": [
-    {
-      "question_id": "0d3ae932-261b-4d04-995c-fd1bb1bb72af",
-      "question_text": "What is the output of greet(\"Alice\")?",
-      "topic_tag": "functions",
-      "is_correct": true,
-      "score": 1.0
-    }
-  ]
+  "overall_score": 0.83,
+  "grade": "A",
+  "answered": 2,
+  "total_questions": 4,
+  "knowledge_gaps": [
+    { "topic": "generalization",    "frequency": 1 },
+    { "topic": "model_performance", "frequency": 1 }
+  ],
+  "recommendation": "Good progress. Focus your revision on: generalization, model_performance.",
+  "question_breakdown": [...]
 }
 ```
 
 ---
 
-## How It Works
+## Real Test Results
 
-```
-                        AdaptQuiz API — Architecture
-  ┌────────────────────────────────────────────────────────────────────┐
-  │                                                                    │
-  │   PDF / TXT                                                        │
-  │      │                                                             │
-  │      ▼                                                             │
-  │  ┌──────────┐  extract &   ┌─────────────┐   embed (local CPU)    │
-  │  │  ingest  │ ──────────►  │   chunker   │ ──────────────────────► │
-  │  │ /ingest  │              │ 800 chars   │                         │
-  │  └──────────┘              │ 100 overlap │   sentence-transformers  │
-  │                            └─────────────┘   all-MiniLM-L6-v2      │
-  │                                   │                                │
-  │                                   ▼                                │
-  │                            ┌─────────────┐                        │
-  │                            │ FAISS index │  persisted to ./data/   │
-  │                            │  doc_id +   │                        │
-  │                            │  metadata   │                        │
-  │                            └─────────────┘                        │
-  │                                   │                                │
-  │                  ┌────────────────┘                               │
-  │                  │  fetch all chunks by doc_id                    │
-  │                  ▼                                                 │
-  │  ┌───────────────────┐  structured   ┌─────────────────────┐     │
-  │  │  /quiz/generate   │ ── prompt ──► │    GPT-4o (LLM)     │     │
-  │  │  difficulty       │               │  json_object mode   │     │
-  │  │  question_types   │ ◄─ questions ─│  3–15 questions     │     │
-  │  │  num_questions    │               └─────────────────────┘     │
-  │  └───────────────────┘                                            │
-  │           │   session_id + questions stored in memory             │
-  │           ▼                                                        │
-  │  ┌────────────────┐  student    ┌─────────────────────┐          │
-  │  │  /eval/answer  │ ─ answer ─► │  GPT-4o (Judge)     │          │
-  │  │                │             │  Accuracy            │          │
-  │  │                │ ◄─ score ── │  Completeness        │          │
-  │  └────────────────┘             │  Terminology         │          │
-  │           │                     └─────────────────────┘          │
-  │           ▼                                                        │
-  │  ┌──────────────────┐                                             │
-  │  │ /session/report  │  aggregate scores · grade · knowledge gaps  │
-  │  └──────────────────┘  personalised study recommendation          │
-  │                                                                    │
-  └────────────────────────────────────────────────────────────────────┘
-```
+**Document:** `ml_fundamentals.pdf` — 2-page PDF covering ML types, key terminology, common algorithms, neural networks, and model evaluation.
+
+| Metric | Result |
+|---|---|
+| Chunks ingested | **9** |
+| Characters extracted | 5,604 |
+| Questions generated | 4 (MCQ, short answer, true/false) |
+| Correct answer score | 100% — all rubric criteria: 1.0 |
+| Partial answer score | **67%** — Accuracy 0.5 (phrasing off), Completeness 0.5 (missing detail), Terminology 1.0 |
+| Session grade | **A** (overall score: 0.83) |
+| Knowledge gaps identified | `generalization`, `model_performance` |
+| Recommendation | Targeted study advice generated automatically |
+
+Partial credit worked exactly as designed — a student who wrote *"the model is too accurate on training data"* received 0.5 on Accuracy and 0.5 on Completeness (missing the generalisation explanation), but full credit on Terminology for correct use of the term "overfitting".
 
 ---
 
-## Project Structure
+## Architecture
 
 ```
-adaptquiz-api/
-├── app/
-│   ├── main.py                    # FastAPI app, middleware, lifespan
-│   ├── config.py                  # Pydantic settings (.env)
-│   ├── api/routes/
-│   │   ├── health.py              # GET  /api/v1/health
-│   │   ├── ingest.py              # POST /api/v1/ingest
-│   │   ├── quiz.py                # POST /api/v1/quiz/generate  ·  GET /api/v1/quiz/{id}
-│   │   ├── eval.py                # POST /api/v1/eval/answer
-│   │   └── session.py             # GET  /api/v1/session/{id}/report
-│   ├── core/
-│   │   ├── embedder.py            # HuggingFace sentence-transformers (local)
-│   │   ├── chunker.py             # Sliding-window text chunker
-│   │   ├── vector_store.py        # FAISS load / save / search / doc_id lookup
-│   │   └── llm.py                 # OpenAI GPT-4o async wrapper
-│   ├── services/
-│   │   ├── ingestion_service.py   # Ingest pipeline orchestration
-│   │   ├── quiz_service.py        # Quiz generation + in-memory session store
-│   │   ├── eval_service.py        # Answer evaluation + rubric scoring
-│   │   └── session_service.py     # Report aggregation + grade + recommendations
-│   ├── prompts/
-│   │   ├── question_gen.py        # Structured prompt for quiz generation
-│   │   └── answer_eval.py         # Structured prompt for LLM-as-judge grading
-│   └── schemas/
-│       ├── ingest.py              # IngestResponse
-│       ├── quiz.py                # QuizGenerateRequest, QuizResponse, Question
-│       ├── eval.py                # AnswerSubmitRequest, AnswerEvalResponse
-│       └── session.py             # SessionReport
-├── tests/
-├── data/                          # FAISS index (auto-created on first run)
-├── requirements.txt
-├── .env.example
-└── README.md
+  PDF / TXT
+      │
+      ▼
+  ┌─────────────────────────────────────────────────────────┐
+  │  POST /ingest                                           │
+  │                                                         │
+  │  Extract text → Chunk (800 chars, 100 overlap)          │
+  │       → Embed (sentence-transformers, local CPU)        │
+  │       → Store in FAISS index  ──────────────────────►  │
+  └─────────────────────────────────────────────────────────┘
+                                        │
+                               FAISS Index (./data/)
+                                        │
+                                        │  fetch all chunks by doc_id
+                                        ▼
+  ┌─────────────────────────────────────────────────────────┐
+  │  POST /quiz/generate                                    │
+  │                                                         │
+  │  Retrieved context + difficulty + question types        │
+  │       → Structured prompt  ──────────►  GPT-4o         │
+  │       ◄── { "questions": [...] }  ────────────────────  │
+  └─────────────────────────────────────────────────────────┘
+                                        │
+                                   Questions + session_id
+                                        │
+                                        ▼
+  Student answer
+      │
+      ▼
+  ┌─────────────────────────────────────────────────────────┐
+  │  POST /eval/answer                                      │
+  │                                                         │
+  │  Question + correct answer + student answer             │
+  │       → Rubric prompt  ───────────────►  GPT-4o Judge  │
+  │       ◄── score · feedback · gap_tags  ───────────────  │
+  └─────────────────────────────────────────────────────────┘
+                                        │
+                              Answers stored in session
+                                        │
+                                        ▼
+  ┌─────────────────────────────────────────────────────────┐
+  │  GET /session/{id}/report                               │
+  │                                                         │
+  │  Aggregate scores → overall_score → grade               │
+  │  Count gap_tags   → knowledge_gaps (top 5)             │
+  │  Generate         → personalised recommendation        │
+  └─────────────────────────────────────────────────────────┘
 ```
-
----
-
-## Environment Variables
-
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `OPENAI_API_KEY` | Yes | — | Your OpenAI API key |
-| `FAISS_INDEX_PATH` | No | `./data/faiss` | Path where the FAISS index is persisted |
-| `EMBEDDING_MODEL` | No | `all-MiniLM-L6-v2` | sentence-transformers model name |
-| `LLM_MODEL` | No | `gpt-4o` | OpenAI model for generation and grading |
-| `CHUNK_SIZE` | No | `800` | Target character count per text chunk |
-| `CHUNK_OVERLAP` | No | `100` | Overlap in characters between adjacent chunks |
 
 ---
 
 ## Built By
 
-**Ila** — MCA Graduate, AI Engineer
+**Ila** — MCA Graduate | AI Engineer in Training
 
-Building production-ready AI systems with a focus on RAG pipelines, LLM evaluation, and developer tooling.
+GitHub: [your github profile link]

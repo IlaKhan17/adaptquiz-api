@@ -40,6 +40,14 @@ class Question(BaseModel):
 class QuizGenerateRequest(BaseModel):
     doc_id: str = Field(description="Identifier of the ingested document to generate the quiz from")
     topic: Optional[str] = Field(default=None, description="Optional specific topic or section to focus questions on")
+    curriculum: Optional[str] = Field(
+        default=None,
+        description=(
+            "Student's curriculum or course board, e.g. 'CBSE Grade 10', 'AP Biology', "
+            "'IB HL Chemistry', 'A-Level Physics'. When provided, quiz questions will be "
+            "aligned to the typical scope and depth of that curriculum."
+        ),
+    )
     difficulty: Difficulty = Field(default=Difficulty.medium, description="Target difficulty level for all questions")
     question_types: list[QuizType] = Field(
         default=[QuizType.mcq, QuizType.short_answer],
