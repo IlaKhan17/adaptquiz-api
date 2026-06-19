@@ -50,10 +50,13 @@ async def get_session_report(
         for tag, count in gap_counter.most_common(_TOP_GAPS)
     ]
 
+    correct_count = sum(1 for a in answers if a.is_correct)
+
     return SessionReport(
         session_id=session_id,
         total_questions=len(questions),
         answered=answered,
+        correct_count=correct_count,
         overall_score=round(overall_score, 2),
         grade=grade,
         knowledge_gaps=knowledge_gaps,
@@ -63,9 +66,12 @@ async def get_session_report(
                 "question_id": q.question_id,
                 "question_text": q.question_text,
                 "topic_tag": q.topic_tag,
+                "question_type": q.question_type,
                 "is_correct": answers_by_qid[q.question_id].is_correct
                 if q.question_id in answers_by_qid else None,
                 "score": answers_by_qid[q.question_id].score
+                if q.question_id in answers_by_qid else None,
+                "score_percentage": answers_by_qid[q.question_id].score_percentage
                 if q.question_id in answers_by_qid else None,
                 "student_answer": answers_by_qid[q.question_id].student_answer
                 if q.question_id in answers_by_qid else None,

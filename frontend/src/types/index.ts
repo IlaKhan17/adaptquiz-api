@@ -101,6 +101,7 @@ export interface SessionReport {
   session_id: string;
   total_questions: number;
   answered: number;
+  correct_count: number;
   overall_score: number;
   grade: string;
   knowledge_gaps: { topic: string; frequency: number }[];
@@ -109,8 +110,10 @@ export interface SessionReport {
     question_id: string;
     question_text: string;
     topic_tag: string;
+    question_type: string;
     is_correct: boolean | null;
     score: number | null;
+    score_percentage: number | null;
     student_answer: string | null;
     correct_answer: string | null;
     detailed_explanation: string | null;

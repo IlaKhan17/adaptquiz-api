@@ -262,15 +262,32 @@ export default function Quiz() {
                 </span>
               </div>
 
-              <div className="space-y-1.5 mb-3">
-                {feedback.rubric_feedback.map((item) => (
-                  <div key={item.criterion} className="flex justify-between text-sm">
-                    <span className="text-gray-600">{item.criterion}</span>
-                    <span className="font-medium text-gray-800">
-                      {Math.round(item.score * 100)}%
-                    </span>
-                  </div>
-                ))}
+              <div className="space-y-2 mb-3">
+                {feedback.rubric_feedback
+                  .filter((item) => item.comment)
+                  .map((item) => {
+                    const pct = Math.round(item.score * 100);
+                    const barColor =
+                      item.score >= 0.7
+                        ? "bg-emerald-400"
+                        : item.score >= 0.5
+                        ? "bg-amber-400"
+                        : "bg-red-400";
+                    return (
+                      <div key={item.criterion}>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-600">{item.criterion}</span>
+                          <span className="font-semibold text-gray-800">{pct}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200/60 rounded-full h-1.5">
+                          <div
+                            className={`h-1.5 rounded-full ${barColor}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
 
               {!feedback.is_correct && (

@@ -86,16 +86,13 @@ export default function Results() {
   const circumference = 2 * Math.PI * 52;
   const strokeDash = (scorePct / 100) * circumference;
 
-  const totalGapFrequency = report.knowledge_gaps.reduce(
-    (sum, g) => sum + g.frequency,
-    0
-  );
   const barData = report.knowledge_gaps.map((g) => ({
     name: g.topic.replace(/_/g, " "),
     frequency: g.frequency,
+    // percentage of questions you attempted that were wrong in this topic
     percentage:
-      totalGapFrequency > 0
-        ? Math.round((g.frequency / totalGapFrequency) * 100)
+      report.answered > 0
+        ? Math.round((g.frequency / report.answered) * 100)
         : 0,
   }));
 
@@ -171,11 +168,11 @@ export default function Results() {
               </span>
               <span className="flex items-center gap-1.5">
                 <CheckCircle className="w-4 h-4 text-emerald-500" />
-                {report.answered} answered
+                {report.correct_count ?? report.question_breakdown.filter((q) => q.is_correct).length} correct
               </span>
               <span className="flex items-center gap-1.5">
                 <Target className="w-4 h-4 text-indigo-500" />
-                {report.question_breakdown.filter((q) => q.is_correct).length} correct
+                {report.answered - (report.correct_count ?? report.question_breakdown.filter((q) => q.is_correct).length)} wrong
               </span>
             </div>
             <p className="text-sm text-gray-500 max-w-sm leading-relaxed">
@@ -194,7 +191,7 @@ export default function Results() {
               <h2 className="font-semibold text-gray-900">Knowledge Gaps</h2>
             </div>
             <p className="text-xs text-gray-400 mb-4">
-              Percentage of missed questions attributable to each topic
+              Wrong answers per topic as a % of questions you attempted
             </p>
             <ResponsiveContainer width="100%" height={barData.length * 44 + 32}>
               <BarChart
@@ -217,7 +214,7 @@ export default function Results() {
                 <Tooltip
                   formatter={(value, name) => {
                     if (name === "percentage")
-                      return [`${value}%`, "Share of gaps"];
+                      return [`${value}%`, "wrong (of attempted)"];
                     return [value, name];
                   }}
                   contentStyle={{ fontSize: 12, borderRadius: 8 }}
@@ -246,7 +243,13 @@ export default function Results() {
           <div className="space-y-2">
             {report.question_breakdown.map((q, i) => {
               const isExpanded = expandedQId === q.question_id;
-              const qScorePct = q.score !== null ? Math.round(q.score * 100) : null;
+              // prefer the exact stored score_percentage; fall back to score * 100
+              const qScorePct =
+                q.score_percentage != null
+                  ? q.score_percentage
+                  : q.score !== null
+                  ? Math.round(q.score * 100)
+                  : null;
               const hasWrongDetails =
                 q.is_correct === false &&
                 (q.detailed_explanation || q.correct_answer || q.improvement_tip);
@@ -358,31 +361,48 @@ export default function Results() {
                       )}
 
                       {/* Rubric breakdown */}
-                      {q.rubric_feedback && q.rubric_feedback.length > 0 && (
+                      {q.rubric_feedback && q.rubric_feedback.filter((fb) => fb.comment).length > 0 && (
                         <div className="mb-2">
-                          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-2">
                             Rubric breakdown
                           </span>
-                          <div className="space-y-1.5">
-                            {q.rubric_feedback.map((fb, idx) => (
-                              <div key={idx} className="flex items-start gap-2">
-                                <span
-                                  className={`shrink-0 text-xs font-bold px-1.5 py-0.5 rounded ${
-                                    fb.score >= 0.7
-                                      ? "bg-emerald-100 text-emerald-700"
-                                      : fb.score >= 0.5
-                                      ? "bg-amber-100 text-amber-700"
-                                      : "bg-red-100 text-red-700"
-                                  }`}
-                                >
-                                  {Math.round(fb.score * 100)}%
-                                </span>
-                                <div className="text-xs text-gray-600">
-                                  <span className="font-medium">{fb.criterion}:</span>{" "}
-                                  {fb.comment}
-                                </div>
-                              </div>
-                            ))}
+                          <div className="space-y-2.5">
+                            {q.rubric_feedback
+                              .filter((fb) => fb.comment)
+                              .map((fb, idx) => {
+                                const pct = Math.round(fb.score * 100);
+                                const barColor =
+                                  fb.score >= 0.7
+                                    ? "bg-emerald-500"
+                                    : fb.score >= 0.5
+                                    ? "bg-amber-400"
+                                    : "bg-red-400";
+                                const badgeColor =
+                                  fb.score >= 0.7
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : fb.score >= 0.5
+                                    ? "bg-amber-100 text-amber-700"
+                                    : "bg-red-100 text-red-700";
+                                return (
+                                  <div key={idx}>
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-xs font-medium text-gray-700">
+                                        {fb.criterion}
+                                      </span>
+                                      <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${badgeColor}`}>
+                                        {pct}%
+                                      </span>
+                                    </div>
+                                    <div className="w-full bg-gray-100 rounded-full h-1.5 mb-1">
+                                      <div
+                                        className={`h-1.5 rounded-full ${barColor}`}
+                                        style={{ width: `${pct}%` }}
+                                      />
+                                    </div>
+                                    <p className="text-xs text-gray-500 leading-relaxed">{fb.comment}</p>
+                                  </div>
+                                );
+                              })}
                           </div>
                         </div>
                       )}

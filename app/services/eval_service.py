@@ -65,7 +65,16 @@ def _evaluate_mcq(request: AnswerSubmitRequest, question: DBQuestion) -> AnswerE
     correct_text = (
         f"{correct_opt['label']}. {correct_opt['text']}" if correct_opt else question.correct_answer
     )
-    comment = "Correct option selected." if is_correct else f"The correct answer was {correct_label}."
+
+    if is_correct:
+        accuracy_comment = f"Correct! You selected {correct_label}: {correct_opt['text'] if correct_opt else ''}".strip()
+    else:
+        student_opt = next((o for o in options if o.get("label", "").upper() == student_label), None)
+        student_text = f" ({student_opt['text']})" if student_opt else ""
+        accuracy_comment = (
+            f"Incorrect. You chose {student_label}{student_text}. "
+            f"The correct answer is {correct_label}: {correct_opt['text'] if correct_opt else ''}."
+        ).strip()
 
     return AnswerEvalResponse(
         question_id=request.question_id,
@@ -74,9 +83,7 @@ def _evaluate_mcq(request: AnswerSubmitRequest, question: DBQuestion) -> AnswerE
         score=score,
         score_percentage=100 if is_correct else 0,
         rubric_feedback=[
-            FeedbackItem(criterion="Accuracy", score=score, comment=comment),
-            FeedbackItem(criterion="Completeness", score=score, comment=""),
-            FeedbackItem(criterion="Terminology", score=score, comment=""),
+            FeedbackItem(criterion="Accuracy", score=score, comment=accuracy_comment),
         ],
         correct_answer=correct_text,
         detailed_explanation=question.explanation,
@@ -92,7 +99,11 @@ def _evaluate_true_false(request: AnswerSubmitRequest, question: DBQuestion) -> 
 
     is_correct = student == correct
     score = 1.0 if is_correct else 0.0
-    comment = "Correct." if is_correct else f"Incorrect. The statement is {correct}."
+    comment = (
+        f"Correct. The statement is {correct}."
+        if is_correct
+        else f"Incorrect. You answered {student} but the statement is {correct}."
+    )
 
     return AnswerEvalResponse(
         question_id=request.question_id,
@@ -102,12 +113,10 @@ def _evaluate_true_false(request: AnswerSubmitRequest, question: DBQuestion) -> 
         score_percentage=100 if is_correct else 0,
         rubric_feedback=[
             FeedbackItem(criterion="Accuracy", score=score, comment=comment),
-            FeedbackItem(criterion="Completeness", score=score, comment=""),
-            FeedbackItem(criterion="Terminology", score=score, comment=""),
         ],
         correct_answer=correct,
         detailed_explanation=question.explanation,
-        improvement_tip="" if is_correct else "Re-read the relevant section to understand why this statement is " + correct + ".",
+        improvement_tip="" if is_correct else f"Re-read the relevant section to understand why this statement is {correct}.",
         knowledge_gap_tags=[] if is_correct else ([question.topic_tag] if question.topic_tag else []),
     )
 
