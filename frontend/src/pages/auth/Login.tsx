@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { BookOpen, Eye, EyeOff } from "lucide-react";
+import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../../contexts/AuthContext";
-import { login } from "../../lib/api";
+import { login, googleLogin } from "../../lib/api";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 
@@ -14,6 +15,20 @@ export default function Login() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const handleGoogleSuccess = async (credential: string) => {
+    setError("");
+    setLoading(true);
+    try {
+      const { access_token } = await googleLogin(credential);
+      await signIn(access_token);
+      navigate("/dashboard");
+    } catch {
+      setError("Google sign-in failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +61,24 @@ export default function Login() {
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
+          <div className="flex justify-center mb-4">
+            <GoogleLogin
+              onSuccess={(res) => {
+                if (res.credential) handleGoogleSuccess(res.credential);
+              }}
+              onError={() => setError("Google sign-in failed. Please try again.")}
+              width="368"
+              text="signin_with"
+              shape="rectangular"
+            />
+          </div>
+
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-xs text-gray-400 font-medium">or continue with email</span>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               label="Email address"

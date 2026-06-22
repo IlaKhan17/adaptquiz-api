@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     secret_key: str = _INSECURE_KEY
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440  # 24 hours
+    google_client_id: str = ""
 
     # CORS — comma-separated origins, e.g. "https://app.example.com,https://www.app.example.com"
     # Use "*" only for local development; set explicit origins in production.

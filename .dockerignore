@@ -1,0 +1,17 @@
+.env
+.git
+.gitignore
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.db
+*.db-shm
+*.db-wal
+data/
+frontend/
+tests/
+*.md
+Procfile
+railway.json
+server_*.txt

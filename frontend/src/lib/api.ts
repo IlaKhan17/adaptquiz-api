@@ -50,6 +50,9 @@ export const login = (email: string, password: string) => {
 
 export const getMe = () => api.get<User>("/auth/me").then((r) => r.data);
 
+export const googleLogin = (credential: string) =>
+  api.post<TokenResponse>("/auth/google", { credential }).then((r) => r.data);
+
 // Documents
 export const getDocuments = () =>
   api.get<DocumentItem[]>("/documents").then((r) => r.data);
