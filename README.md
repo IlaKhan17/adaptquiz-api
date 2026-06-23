@@ -4,6 +4,10 @@
 
 ---
 
+## Live Demo
+- Swagger UI: http://32.236.30.100:8000/docs
+- Health: http://32.236.30.100:8000/api/v1/health
+
 ## What It Does
 
 AdaptQuiz turns any static document into a fully interactive, AI-powered quiz session in five stages:
