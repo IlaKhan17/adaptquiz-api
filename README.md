@@ -287,4 +287,4 @@ Partial credit worked exactly as designed — a student who wrote *"the model is
 
 **Ila** — MCA Graduate | AI Engineer in Training
 
-GitHub: [your github profile link]
+GitHub: [https://github.com/IlaKhan17]
