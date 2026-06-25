@@ -30,10 +30,17 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://adaptquiz-api.vercel.app",
+        "https://*.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:3000",
+    ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 _PREFIX = "/api/v1"
@@ -44,6 +51,11 @@ app.include_router(quiz.router, prefix=_PREFIX)
 app.include_router(eval.router, prefix=_PREFIX)
 app.include_router(session.router, prefix=_PREFIX)
 app.include_router(documents.router, prefix=_PREFIX)
+
+
+@app.options("/{rest_of_path:path}")
+async def preflight_handler(rest_of_path: str):
+    return {}
 
 
 @app.exception_handler(Exception)
