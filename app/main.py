@@ -31,10 +31,10 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://adaptquiz.ilarehman.com",
+        "https://ilarehman.com",
         "https://adaptquiz-api.vercel.app",
-        "https://*.vercel.app",
         "http://localhost:5173",
-        "http://localhost:3000",
     ],
     allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=False,
