@@ -35,6 +35,7 @@ app.add_middleware(
         "https://ilarehman.com",
         "https://adaptquiz-api.vercel.app",
         "http://localhost:5173",
+        "*"
     ],
     allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=False,
