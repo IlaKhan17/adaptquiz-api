@@ -34,6 +34,7 @@ app.add_middleware(
         "https://adaptquiz-api.vercel.app",
         "https://adaptquiz-1m9juyn09-ila-rehman.vercel.app",
         "http://localhost:5173",
+        "*"
     ],
     allow_credentials=False,
     allow_methods=["*"],
