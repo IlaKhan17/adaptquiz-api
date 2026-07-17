@@ -2,10 +2,10 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.exceptions import RequestValidationError
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.routes import auth, documents, eval, health, ingest, quiz, session
 from app.config import settings
@@ -28,16 +28,32 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+class CatchExceptionMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        try:
+            return await call_next(request)
+        except Exception:
+            # Registering this as an @app.exception_handler(Exception) instead would route
+            # the response through Starlette's ServerErrorMiddleware, which sits outside
+            # CORSMiddleware and would strip CORS headers from every unhandled-error response.
+            logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
+            return JSONResponse(
+                status_code=500,
+                content={"detail": "Something went wrong, please try again"},
+            )
+
+
+# CORSMiddleware must be added last so it ends up outermost in the stack
+# (Starlette's add_middleware prepends), otherwise error responses from
+# CatchExceptionMiddleware would bypass it and come back with no CORS headers.
+app.add_middleware(CatchExceptionMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://adaptquiz.ilarehman.com",
         "https://ilarehman.com",
-        "https://adaptquiz-api.vercel.app",
-        "http://localhost:5173",
-        "*"
     ],
-    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -57,18 +73,6 @@ app.include_router(documents.router, prefix=_PREFIX)
 @app.options("/{rest_of_path:path}")
 async def preflight_handler(rest_of_path: str):
     return {}
-
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    # Let FastAPI's own handlers deal with HTTP and validation errors
-    if isinstance(exc, (HTTPException, RequestValidationError)):
-        raise exc
-    logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Something went wrong, please try again"},
-    )
 
 
 @app.get("/")

@@ -16,13 +16,16 @@ def _init_store_locked() -> FAISS:
     global _store
     if _store is None:
         embeddings = get_embeddings()
-        if os.path.exists(settings.faiss_index_path):
+        index_file = os.path.join(settings.faiss_index_path, "index.faiss")
+        if os.path.exists(index_file):
             _store = FAISS.load_local(
                 settings.faiss_index_path, embeddings, allow_dangerous_deserialization=True
             )
         else:
             placeholder = Document(page_content="init", metadata={})
             _store = FAISS.from_documents([placeholder], embeddings)
+            os.makedirs(settings.faiss_index_path, exist_ok=True)
+            _store.save_local(settings.faiss_index_path)
     return _store
 
 
