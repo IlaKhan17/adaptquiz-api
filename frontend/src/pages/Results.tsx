@@ -1,444 +1,207 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import {
-  ArrowLeft,
-  BookOpen,
-  CheckCircle,
-  ChevronDown,
-  ChevronUp,
-  Lightbulb,
-  RefreshCw,
-  Target,
-  XCircle,
-} from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  Cell,
-  LabelList,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { ChevronDown, ChevronLeft } from "lucide-react";
 import { getSessionReport } from "../lib/api";
+import type { SessionReport } from "../types";
 import Button from "../components/ui/Button";
-import Card, { CardBody } from "../components/ui/Card";
-import Badge from "../components/ui/Badge";
 import Spinner from "../components/ui/Spinner";
-import { gradeBg, scoreToPercent } from "../lib/utils";
+import { CircledGrade, Mark } from "../components/ui/Mark";
+import { cn, QUESTION_TYPE_LABELS, scoreToPercent } from "../lib/utils";
 
-function AnimatedScore({ target }: { target: number }) {
-  const [display, setDisplay] = useState(0);
-  const frame = useRef(0);
+type Row = SessionReport["question_breakdown"][number];
 
-  useEffect(() => {
-    const duration = 1200;
-    const start = performance.now();
-    const tick = (now: number) => {
-      const elapsed = now - start;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplay(Math.round(eased * target));
-      if (progress < 1) frame.current = requestAnimationFrame(tick);
-    };
-    frame.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame.current);
-  }, [target]);
+function QuestionRow({ q, index }: { q: Row; index: number }) {
+  const [open, setOpen] = useState(false);
+  const answered = q.is_correct !== null;
+  const pct = q.score_percentage ?? (q.score !== null ? Math.round(q.score * 100) : null);
+  const rubric = (q.rubric_feedback ?? []).filter((r) => r.comment);
+  const panelId = `q-${q.question_id}`;
 
-  return <span>{display}</span>;
+  return (
+    <li>
+      <button
+        className="w-full grid grid-cols-[2.5rem_1fr_auto_auto] items-center gap-3 px-4 sm:px-6 py-4 text-left hover:bg-desk/60 transition-colors"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-controls={panelId}
+        disabled={!answered}
+      >
+        <span className="text-center" aria-label={!answered ? "Not answered" : q.is_correct ? "Correct" : "Incorrect"}>
+          {!answered ? (
+            <span className="text-ink-faint font-bold">{index + 1}</span>
+          ) : (
+            <Mark animate={false} tone={q.is_correct ? "right" : "marker"} className="text-3xl">
+              {q.is_correct ? "✓" : "✗"}
+            </Mark>
+          )}
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate">{q.question_text}</span>
+          <span className="block text-sm text-ink-muted truncate">
+            {QUESTION_TYPE_LABELS[q.question_type] ?? q.question_type}
+            {q.topic_tag ? `, ${q.topic_tag.replace(/_/g, " ")}` : ""}
+          </span>
+        </span>
+        <span className={cn("font-bold tabular-nums", !answered && "text-ink-faint text-sm font-normal")}>
+          {answered && pct !== null ? `${pct}%` : "Skipped"}
+        </span>
+        {answered ? (
+          <ChevronDown className={cn("w-4 h-4 text-ink-faint transition-transform", open && "rotate-180")} aria-hidden />
+        ) : (
+          <span className="w-4" />
+        )}
+      </button>
+
+      {open && answered && (
+        <div id={panelId} className="px-4 sm:px-6 pb-6 sm:pl-[4.75rem] space-y-4 animate-fade-in">
+          <p className="font-bold leading-relaxed">{q.question_text}</p>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {q.student_answer && (
+              <div className={cn("rounded-md px-4 py-3", q.is_correct ? "bg-right-wash" : "bg-marker-wash")}>
+                <p className="text-sm font-bold">Your answer</p>
+                <p className={cn(q.is_correct ? "text-right" : "text-marker")}>{q.student_answer}</p>
+              </div>
+            )}
+            {!q.is_correct && q.correct_answer && (
+              <div className="rounded-md px-4 py-3 bg-right-wash">
+                <p className="text-sm font-bold">Correct answer</p>
+                <p className="text-right">{q.correct_answer}</p>
+              </div>
+            )}
+          </div>
+          {q.detailed_explanation && <p className="text-ink-soft leading-relaxed">{q.detailed_explanation}</p>}
+          {rubric.length > 1 && (
+            <dl className="space-y-2 border-l-2 border-rule pl-4">
+              {rubric.map((r) => (
+                <div key={r.criterion}>
+                  <dt className="font-bold">
+                    {r.criterion} <span className="tabular-nums text-ink-muted font-normal">{Math.round(r.score * 100)}%</span>
+                  </dt>
+                  <dd className="text-ink-soft text-[0.95rem]">{r.comment}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          {!q.is_correct && q.improvement_tip && (
+            <p className="bg-highlight-soft rounded-md px-4 py-3">
+              <span className="font-bold">Next time: </span>
+              {q.improvement_tip}
+            </p>
+          )}
+        </div>
+      )}
+    </li>
+  );
 }
-
-const GRADE_RING_COLOR: Record<string, string> = {
-  "A+": "#10b981",
-  A: "#10b981",
-  B: "#3b82f6",
-  C: "#f59e0b",
-  "Needs Improvement": "#ef4444",
-};
-
-const BAR_COLORS = ["#ef4444", "#f59e0b", "#6366f1", "#8b5cf6", "#06b6d4"];
 
 export default function Results() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
-  const [expandedQId, setExpandedQId] = useState<string | null>(null);
 
-  const { data: report, isLoading } = useQuery({
+  const { data: report, isLoading, isError } = useQuery({
     queryKey: ["report", sessionId],
     queryFn: () => getSessionReport(sessionId!),
     enabled: !!sessionId,
   });
 
+  if (isError) {
+    return (
+      <div className="max-w-xl sheet p-8">
+        <h1 className="text-heading">These results couldn’t be opened</h1>
+        <p className="mt-2 text-ink-soft">The quiz may have been removed, or the link is wrong.</p>
+        <Button className="mt-6" onClick={() => navigate("/dashboard")}>Back to your desk</Button>
+      </div>
+    );
+  }
+
   if (isLoading || !report) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
         <Spinner size="lg" />
-        <p className="text-gray-500">Loading results…</p>
+        <p className="text-ink-muted">Adding up your marks…</p>
       </div>
     );
   }
 
   const scorePct = scoreToPercent(report.overall_score);
-  const ringColor = GRADE_RING_COLOR[report.grade] ?? "#6366f1";
-  const circumference = 2 * Math.PI * 52;
-  const strokeDash = (scorePct / 100) * circumference;
-
-  const barData = report.knowledge_gaps.map((g) => ({
-    name: g.topic.replace(/_/g, " "),
-    frequency: g.frequency,
-    // percentage of questions you attempted that were wrong in this topic
-    percentage:
-      report.answered > 0
-        ? Math.round((g.frequency / report.answered) * 100)
-        : 0,
-  }));
+  const correct = report.correct_count;
+  const unanswered = report.total_questions - report.answered;
+  const maxGap = Math.max(1, ...report.knowledge_gaps.map((g) => g.frequency));
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Dashboard
-        </button>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => navigate("/upload")}
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          New Quiz
-        </Button>
-      </div>
+    <div className="max-w-3xl mx-auto space-y-8">
+      <button
+        onClick={() => navigate("/dashboard")}
+        className="inline-flex items-center gap-1 font-bold text-ink-soft hover:text-ink"
+      >
+        <ChevronLeft className="w-4 h-4" aria-hidden />
+        Your desk
+      </button>
 
-      {/* Score hero */}
-      <Card>
-        <CardBody className="flex flex-col sm:flex-row items-center gap-8 py-8">
-          <div className="relative shrink-0">
-            <svg width="128" height="128" viewBox="0 0 128 128">
-              <circle
-                cx="64"
-                cy="64"
-                r="52"
-                fill="none"
-                stroke="#f1f5f9"
-                strokeWidth="12"
-              />
-              <motion.circle
-                cx="64"
-                cy="64"
-                r="52"
-                fill="none"
-                stroke={ringColor}
-                strokeWidth="12"
-                strokeLinecap="round"
-                strokeDasharray={`${circumference}`}
-                strokeDashoffset={circumference}
-                animate={{ strokeDashoffset: circumference - strokeDash }}
-                transition={{ duration: 1.2, ease: "easeOut" }}
-                transform="rotate(-90 64 64)"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-3xl font-extrabold text-gray-900">
-                <AnimatedScore target={scorePct} />
-                <span className="text-lg">%</span>
-              </span>
-            </div>
-          </div>
+      {/* The marked paper: grade circled at the top */}
+      <section className="sheet ruled px-6 sm:px-10 py-8 grid sm:grid-cols-[auto_1fr] gap-6 sm:gap-10 items-center">
+        <div className="justify-self-center sm:justify-self-start">
+          <CircledGrade grade={report.grade} />
+        </div>
+        <div>
+          <h1 className="text-title">
+            {scorePct}%{" "}
+            <span className="text-ink-muted font-normal text-heading">
+              on {report.answered} of {report.total_questions} questions
+            </span>
+          </h1>
+          <p className="mt-2 text-ink-soft">
+            {correct} right, {report.answered - correct} wrong
+            {unanswered > 0 ? `, ${unanswered} not answered` : ""}.
+          </p>
+          <p className="mt-4 leading-relaxed max-w-prose">{report.recommendation}</p>
+        </div>
+      </section>
 
-          <div className="text-center sm:text-left">
-            <div className="flex items-center gap-2 mb-2">
-              <h1 className="text-2xl font-bold text-gray-900">Quiz Complete!</h1>
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-bold border ${gradeBg(report.grade)}`}
-              >
-                {report.grade}
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
-              <span className="flex items-center gap-1.5">
-                <BookOpen className="w-4 h-4" />
-                {report.total_questions} questions
-              </span>
-              <span className="flex items-center gap-1.5">
-                <CheckCircle className="w-4 h-4 text-emerald-500" />
-                {report.correct_count ?? report.question_breakdown.filter((q) => q.is_correct).length} correct
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Target className="w-4 h-4 text-indigo-500" />
-                {report.answered - (report.correct_count ?? report.question_breakdown.filter((q) => q.is_correct).length)} wrong
-              </span>
-            </div>
-            <p className="text-sm text-gray-500 max-w-sm leading-relaxed">
-              {report.recommendation}
-            </p>
-          </div>
-        </CardBody>
-      </Card>
-
-      {/* Knowledge gaps */}
-      {barData.length > 0 && (
-        <Card>
-          <CardBody>
-            <div className="flex items-center gap-2 mb-1">
-              <Lightbulb className="w-5 h-5 text-amber-500" />
-              <h2 className="font-semibold text-gray-900">Knowledge Gaps</h2>
-            </div>
-            <p className="text-xs text-gray-400 mb-4">
-              Wrong answers per topic as a % of questions you attempted
-            </p>
-            <ResponsiveContainer width="100%" height={barData.length * 44 + 32}>
-              <BarChart
-                data={barData}
-                layout="vertical"
-                margin={{ left: 8, right: 48 }}
-              >
-                <XAxis
-                  type="number"
-                  domain={[0, 100]}
-                  tickFormatter={(v) => `${v}%`}
-                  tick={{ fontSize: 11 }}
-                />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  tick={{ fontSize: 11 }}
-                  width={120}
-                />
-                <Tooltip
-                  formatter={(value, name) => {
-                    if (name === "percentage")
-                      return [`${value}%`, "wrong (of attempted)"];
-                    return [value, name];
-                  }}
-                  contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                />
-                <Bar dataKey="percentage" radius={[0, 6, 6, 0]}>
-                  <LabelList
-                    dataKey="percentage"
-                    position="right"
-                    formatter={(v: number) => `${v}%`}
-                    style={{ fontSize: 11, fontWeight: 600, fill: "#374151" }}
+      {/* What to revise */}
+      {report.knowledge_gaps.length > 0 && (
+        <section className="sheet px-6 sm:px-10 py-7" aria-labelledby="gaps-heading">
+          <h2 id="gaps-heading" className="text-heading">What to revise</h2>
+          <p className="mt-1 text-ink-muted">Topics that came up in answers you lost marks on, most often first.</p>
+          <ul className="mt-6 space-y-4">
+            {report.knowledge_gaps.map((g) => (
+              <li key={g.topic} className="grid grid-cols-[minmax(0,11rem)_1fr_auto] items-center gap-4">
+                <span className="font-bold capitalize truncate" title={g.topic}>
+                  {g.topic.replace(/[_-]/g, " ")}
+                </span>
+                <span className="h-3 rounded-sm bg-desk overflow-hidden" aria-hidden>
+                  <span
+                    className="block h-full bg-highlight"
+                    style={{ width: `${(g.frequency / maxGap) * 100}%` }}
                   />
-                  {barData.map((_, i) => (
-                    <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardBody>
-        </Card>
+                </span>
+                <span className="text-sm text-ink-muted tabular-nums">
+                  {g.frequency} {g.frequency === 1 ? "time" : "times"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
-      {/* Question breakdown */}
-      <Card>
-        <CardBody>
-          <h2 className="font-semibold text-gray-900 mb-4">Question Breakdown</h2>
-          <div className="space-y-2">
-            {report.question_breakdown.map((q, i) => {
-              const isExpanded = expandedQId === q.question_id;
-              // prefer the exact stored score_percentage; fall back to score * 100
-              const qScorePct =
-                q.score_percentage != null
-                  ? q.score_percentage
-                  : q.score !== null
-                  ? Math.round(q.score * 100)
-                  : null;
-              const hasWrongDetails =
-                q.is_correct === false &&
-                (q.detailed_explanation || q.correct_answer || q.improvement_tip);
+      {/* Every question */}
+      <section aria-labelledby="breakdown-heading">
+        <h2 id="breakdown-heading" className="text-heading mb-4">Each question</h2>
+        <ol className="sheet divide-y divide-rule-soft">
+          {report.question_breakdown.map((q, i) => (
+            <QuestionRow key={q.question_id} q={q} index={i} />
+          ))}
+        </ol>
+      </section>
 
-              return (
-                <div
-                  key={q.question_id}
-                  className="border border-gray-100 rounded-xl overflow-hidden"
-                >
-                  <button
-                    className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 text-left transition-colors"
-                    onClick={() =>
-                      setExpandedQId(isExpanded ? null : q.question_id)
-                    }
-                  >
-                    <div className="shrink-0">
-                      {q.is_correct === null ? (
-                        <div className="w-6 h-6 rounded-full bg-gray-200 text-xs font-bold flex items-center justify-center text-gray-500">
-                          {i + 1}
-                        </div>
-                      ) : q.is_correct ? (
-                        <CheckCircle className="w-6 h-6 text-emerald-500" />
-                      ) : (
-                        <XCircle className="w-6 h-6 text-red-400" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-800 truncate">{q.question_text}</p>
-                      {q.topic_tag && (
-                        <Badge variant="indigo" className="mt-1 text-xs">
-                          {q.topic_tag.replace(/_/g, " ")}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      {qScorePct !== null && (
-                        <span
-                          className={`text-sm font-bold ${
-                            qScorePct >= 70
-                              ? "text-emerald-600"
-                              : qScorePct >= 50
-                              ? "text-amber-600"
-                              : "text-red-500"
-                          }`}
-                        >
-                          {qScorePct}%
-                        </span>
-                      )}
-                      {(hasWrongDetails || q.is_correct !== null) &&
-                        (isExpanded ? (
-                          <ChevronUp className="w-4 h-4 text-gray-400" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 text-gray-400" />
-                        ))}
-                    </div>
-                  </button>
-
-                  {isExpanded && (
-                    <div
-                      className={`px-4 pb-5 pt-3 border-t border-gray-100 text-sm ${
-                        q.is_correct === false ? "bg-red-50/40" : "bg-emerald-50/30"
-                      }`}
-                    >
-                      {/* Full question */}
-                      <p className="text-gray-700 font-medium mb-3">
-                        {q.question_text}
-                      </p>
-
-                      {/* Your answer */}
-                      {q.student_answer && (
-                        <div className="mb-2">
-                          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                            Your answer
-                          </span>
-                          <p
-                            className={`mt-0.5 rounded-lg px-3 py-2 text-sm ${
-                              q.is_correct
-                                ? "bg-emerald-100 text-emerald-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {q.student_answer}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Correct answer (only for wrong) */}
-                      {q.is_correct === false && q.correct_answer && (
-                        <div className="mb-2">
-                          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                            Correct answer
-                          </span>
-                          <p className="mt-0.5 bg-emerald-100 text-emerald-800 rounded-lg px-3 py-2 text-sm">
-                            {q.correct_answer}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Detailed explanation */}
-                      {q.detailed_explanation && (
-                        <div className="mb-2">
-                          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                            Explanation
-                          </span>
-                          <p className="mt-0.5 text-gray-700 leading-relaxed">
-                            {q.detailed_explanation}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Rubric breakdown */}
-                      {q.rubric_feedback && q.rubric_feedback.filter((fb) => fb.comment).length > 0 && (
-                        <div className="mb-2">
-                          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-2">
-                            Rubric breakdown
-                          </span>
-                          <div className="space-y-2.5">
-                            {q.rubric_feedback
-                              .filter((fb) => fb.comment)
-                              .map((fb, idx) => {
-                                const pct = Math.round(fb.score * 100);
-                                const barColor =
-                                  fb.score >= 0.7
-                                    ? "bg-emerald-500"
-                                    : fb.score >= 0.5
-                                    ? "bg-amber-400"
-                                    : "bg-red-400";
-                                const badgeColor =
-                                  fb.score >= 0.7
-                                    ? "bg-emerald-100 text-emerald-700"
-                                    : fb.score >= 0.5
-                                    ? "bg-amber-100 text-amber-700"
-                                    : "bg-red-100 text-red-700";
-                                return (
-                                  <div key={idx}>
-                                    <div className="flex items-center justify-between mb-1">
-                                      <span className="text-xs font-medium text-gray-700">
-                                        {fb.criterion}
-                                      </span>
-                                      <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${badgeColor}`}>
-                                        {pct}%
-                                      </span>
-                                    </div>
-                                    <div className="w-full bg-gray-100 rounded-full h-1.5 mb-1">
-                                      <div
-                                        className={`h-1.5 rounded-full ${barColor}`}
-                                        style={{ width: `${pct}%` }}
-                                      />
-                                    </div>
-                                    <p className="text-xs text-gray-500 leading-relaxed">{fb.comment}</p>
-                                  </div>
-                                );
-                              })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Improvement tip */}
-                      {q.is_correct === false && q.improvement_tip && (
-                        <div className="mt-3 flex gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                          <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                          <p className="text-xs text-amber-800 leading-relaxed">
-                            <span className="font-semibold">Tip: </span>
-                            {q.improvement_tip}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </CardBody>
-      </Card>
-
-      <div className="flex gap-3 pb-8">
-        <Button
-          variant="secondary"
-          fullWidth
-          onClick={() => navigate("/dashboard")}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Dashboard
-        </Button>
-        <Button fullWidth onClick={() => navigate("/upload")}>
-          <RefreshCw className="w-4 h-4" />
-          New Quiz
-        </Button>
+      <div className="flex flex-col sm:flex-row gap-3 pb-8">
+        {unanswered > 0 && (
+          <Button variant="secondary" onClick={() => navigate(`/quiz/${report.session_id}`)}>
+            Finish this quiz
+          </Button>
+        )}
+        <Button onClick={() => navigate("/dashboard")}>Make another quiz</Button>
       </div>
     </div>
   );

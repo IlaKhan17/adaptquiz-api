@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { BookOpen, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../../contexts/AuthContext";
 import { register, googleLogin } from "../../lib/api";
+import { errorDetail } from "../../lib/utils";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
+import AuthLayout from "../../components/layout/AuthLayout";
 
 export default function Register() {
   const { signIn } = useAuth();
@@ -24,7 +26,7 @@ export default function Register() {
       await signIn(access_token);
       navigate("/dashboard");
     } catch {
-      setError("Google sign-in failed. Please try again.");
+      setError("Google sign-up didn’t go through. Try again, or use your email and a password.");
     } finally {
       setLoading(false);
     }
@@ -34,7 +36,7 @@ export default function Register() {
     e.preventDefault();
     setError("");
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      setError("Use at least 8 characters for your password.");
       return;
     }
     setLoading(true);
@@ -43,95 +45,84 @@ export default function Register() {
       await signIn(access_token);
       navigate("/dashboard");
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setError(msg || "Registration failed. Please try again.");
+      setError(errorDetail(err, "The account couldn’t be created. Check your email and try again."));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-xl flex items-center justify-center shadow-sm">
-              <BookOpen className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-bold text-gray-900 text-xl">AdaptQuiz</span>
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
-          <p className="text-gray-500 text-sm mt-1">Start learning smarter, for free</p>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
-          <div className="flex justify-center mb-4">
-            <GoogleLogin
-              onSuccess={(res) => {
-                if (res.credential) handleGoogleSuccess(res.credential);
-              }}
-              onError={() => setError("Google sign-in failed. Please try again.")}
-              width="368"
-              text="signup_with"
-              shape="rectangular"
-            />
-          </div>
-
-          <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-xs text-gray-400 font-medium">or sign up with email</span>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              label="Email address"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-            <div className="relative">
-              <Input
-                label="Password"
-                type={showPw ? "text" : "password"}
-                placeholder="Min. 8 characters"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="new-password"
-                hint="Must be at least 8 characters."
-              />
-              <button
-                type="button"
-                onClick={() => setShowPw((s) => !s)}
-                className="absolute right-3 top-9 text-gray-400 hover:text-gray-600"
-              >
-                {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-
-            {error && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-                {error}
-              </p>
-            )}
-
-            <Button type="submit" fullWidth loading={loading} size="lg" className="mt-2">
-              Create account
-            </Button>
-          </form>
-        </div>
-
-        <p className="text-center text-sm text-gray-500 mt-6">
+    <AuthLayout
+      title="Create your account"
+      subtitle="Free. Your notes and quizzes stay private to you."
+      footer={
+        <>
           Already have an account?{" "}
-          <Link to="/login" className="text-indigo-600 font-medium hover:underline">
+          <Link to="/login" className="font-bold text-pen hover:underline">
             Sign in
           </Link>
-        </p>
+        </>
+      }
+    >
+      <div className="flex justify-center">
+        <GoogleLogin
+          onSuccess={(res) => {
+            if (res.credential) handleGoogleSuccess(res.credential);
+          }}
+          onError={() => setError("Google sign-up didn’t go through. Try again, or use your email and a password.")}
+          width="320"
+          text="signup_with"
+          shape="rectangular"
+        />
       </div>
-    </div>
+
+      <div className="flex items-center gap-3 my-6" aria-hidden>
+        <div className="flex-1 h-px bg-rule" />
+        <span className="text-sm text-ink-muted">or with email</span>
+        <div className="flex-1 h-px bg-rule" />
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <Input
+          label="Email"
+          type="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          autoComplete="email"
+        />
+        <div className="relative">
+          <Input
+            label="Password"
+            type={showPw ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete="new-password"
+            hint="At least 8 characters."
+            className="pr-11"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPw((s) => !s)}
+            aria-label={showPw ? "Hide password" : "Show password"}
+            className="absolute right-3 top-[2.35rem] text-ink-muted hover:text-ink"
+          >
+            {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+
+        {error && (
+          <p role="alert" className="text-sm text-marker bg-marker-wash rounded-md px-3 py-2">
+            {error}
+          </p>
+        )}
+
+        <Button type="submit" fullWidth loading={loading} size="lg">
+          Create account
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }

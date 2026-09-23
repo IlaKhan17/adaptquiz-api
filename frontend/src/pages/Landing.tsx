@@ -1,141 +1,146 @@
 import { Link } from "react-router-dom";
-import { BookOpen, Brain, BarChart2, Sparkles, Zap } from "lucide-react";
 import Button from "../components/ui/Button";
+import Logo from "../components/ui/Logo";
+import { Mark } from "../components/ui/Mark";
 
-const features = [
+const steps = [
   {
-    icon: Sparkles,
-    title: "AI-Generated Questions",
-    desc: "GPT-4o reads your material and crafts MCQ, short-answer, true/false, and fill-in-the-blank questions automatically.",
-    color: "bg-indigo-50 text-indigo-600",
+    title: "Add your notes",
+    body: "Upload a PDF, Word document or text file: lecture slides, a textbook chapter, your own revision notes.",
   },
   {
-    icon: Brain,
-    title: "Rubric-Based Grading",
-    desc: "Every answer is scored on Accuracy, Completeness, and Terminology — partial credit, not binary right/wrong.",
-    color: "bg-violet-50 text-violet-600",
+    title: "Answer questions written from them",
+    body: "Choose a topic, a difficulty and your course. You get multiple choice, true or false, fill in the blank and short answer questions, all taken from what you uploaded.",
   },
   {
-    icon: BarChart2,
-    title: "Knowledge Gap Analysis",
-    desc: "See exactly which topics you're struggling with, ranked by frequency, with personalised revision recommendations.",
-    color: "bg-emerald-50 text-emerald-600",
+    title: "Get every answer marked",
+    body: "Multiple choice is checked instantly. Written answers are marked for accuracy, completeness and use of terms, with partial credit, and each one comes back with an explanation.",
   },
 ];
 
+/** A page from the student's notes, the question written from it, and the examiner's mark. */
+function MarkedSpecimen() {
+  return (
+    <div className="relative" aria-label="Example of a marked answer">
+      {/* The notes the question came from, tucked behind */}
+      <div className="sheet absolute -top-6 -left-4 right-10 p-5 -rotate-2 hidden sm:block" aria-hidden>
+        <p className="text-sm text-ink-muted mb-2">notes-week-4.pdf, page 2</p>
+        <p className="text-sm leading-6 text-ink-soft">
+          During the light-dependent reactions, water is split and{" "}
+          <span className="hl text-ink">oxygen is released as a by-product</span>. The Calvin cycle then
+          uses carbon dioxide to build glucose.
+        </p>
+      </div>
+
+      <div className="sheet ruled relative sm:mt-28 p-6 sm:p-8">
+        <div className="flex items-baseline justify-between gap-4">
+          <p className="text-sm text-ink-muted">Question 2 of 8</p>
+          <p className="text-sm text-ink-muted">Short answer</p>
+        </div>
+        <p className="mt-3 text-lg font-bold leading-8">
+          Where does the oxygen released by photosynthesis come from?
+        </p>
+
+        <p className="mt-4 text-sm text-ink-muted">Your answer</p>
+        <p className="leading-8">It comes from splitting water in the light reactions.</p>
+
+        <div className="mt-6 grid grid-cols-[1fr_auto] items-end gap-6 border-t border-rule-soft pt-4">
+          <dl className="grid grid-cols-[auto_auto] gap-x-4 gap-y-1 text-sm">
+            <dt className="text-ink-muted">Accuracy</dt>
+            <dd className="font-bold tabular-nums">1.0</dd>
+            <dt className="text-ink-muted">Completeness</dt>
+            <dd className="font-bold tabular-nums">1.0</dd>
+            <dt className="text-ink-muted">Terminology</dt>
+            <dd className="font-bold tabular-nums">0.8</dd>
+          </dl>
+          <Mark className="text-6xl sm:text-7xl pr-2 [animation-delay:350ms]">93%</Mark>
+        </div>
+        <p className="mt-4 text-sm text-ink-soft">
+          <span className="font-bold text-ink">To improve:</span> name the process. It’s called photolysis.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-white">
-      {/* Nav */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-lg flex items-center justify-center">
-              <BookOpen className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-bold text-gray-900 text-lg">AdaptQuiz</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link to="/login">
-              <Button variant="ghost" size="sm">Sign in</Button>
-            </Link>
-            <Link to="/register">
-              <Button size="sm">Get Started</Button>
-            </Link>
-          </div>
-        </div>
+    <div className="min-h-screen bg-desk text-ink">
+      <header className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <Logo />
+        <nav className="flex items-center gap-2 sm:gap-4" aria-label="Account">
+          <Link to="/login" className="px-2 py-2 font-bold text-ink-soft hover:text-ink">
+            Sign in
+          </Link>
+          <Link to="/register">
+            <Button size="sm">Create account</Button>
+          </Link>
+        </nav>
       </header>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-700 py-24 px-4">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-        <div className="relative max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-white/15 border border-white/20 rounded-full px-4 py-1.5 text-sm text-white/90 mb-6">
-            <Zap className="w-3.5 h-3.5" />
-            Powered by GPT-4o + RAG
+      <main>
+        {/* Hero */}
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 sm:pt-16 pb-20 grid lg:grid-cols-[1.05fr_1fr] gap-14 lg:gap-16 items-center">
+          <div className="max-w-xl">
+            <h1 className="text-[2.6rem] sm:text-display">
+              Turn your notes into a quiz, and get every answer marked.
+            </h1>
+            <p className="mt-6 text-lg text-ink-soft leading-relaxed max-w-[34rem]">
+              Upload what you’re studying. AdaptQuiz writes questions from it, marks your answers the
+              way a teacher would, with partial credit, and tells you which topics to go back to.
+            </p>
+            <div className="mt-9 flex flex-col sm:flex-row gap-3">
+              <Link to="/register">
+                <Button size="lg" className="w-full sm:w-auto">
+                  Make your first quiz
+                </Button>
+              </Link>
+              <Link to="/login">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                  Sign in
+                </Button>
+              </Link>
+            </div>
+            <p className="mt-5 text-sm text-ink-muted">Free to use. Works with PDF, Word and text files.</p>
           </div>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white leading-tight tracking-tight mb-6">
-            Turn any document into
-            <br />
-            <span className="text-indigo-200">an adaptive quiz</span>
-          </h1>
-          <p className="text-lg text-indigo-100 max-w-2xl mx-auto mb-10">
-            Upload a PDF or text file. AdaptQuiz uses AI to generate personalised questions,
-            grades your answers with rubric-based partial credit, and shows you exactly
-            what to study next.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link to="/register">
-              <Button size="lg" variant="light" className="shadow-lg w-full sm:w-auto">
-                Start for free
-              </Button>
-            </Link>
-            <Link to="/login">
-              <Button size="lg" variant="ghost-invert" className="w-full sm:w-auto">
-                Sign in
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
 
-      {/* Features */}
-      <section className="py-20 px-4 bg-gray-50">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">
-              Everything you need to learn smarter
-            </h2>
-            <p className="text-gray-500 text-lg max-w-xl mx-auto">
-              From upload to insights in minutes, not hours.
+          <MarkedSpecimen />
+        </section>
+
+        {/* How it works — a real sequence, so it's numbered */}
+        <section className="bg-paper border-y border-rule">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+            <h2 className="text-title max-w-lg">From a chapter to a marked quiz in about a minute</h2>
+            <ol className="mt-12 grid md:grid-cols-3 gap-10 md:gap-8">
+              {steps.map((s, i) => (
+                <li key={s.title} className="border-t-2 border-ink pt-5">
+                  <span className="font-hand text-4xl text-marker leading-none">{i + 1}</span>
+                  <h3 className="mt-2 text-heading">{s.title}</h3>
+                  <p className="mt-3 text-ink-soft leading-relaxed max-w-[34ch]">{s.body}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* Close */}
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 py-20 flex flex-col md:flex-row md:items-end md:justify-between gap-8">
+          <div className="max-w-lg">
+            <h2 className="text-title">Try it with the chapter you’re revising now.</h2>
+            <p className="mt-3 text-ink-soft">
+              You’ll see which topics you’ve got and which ones need another read.
             </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {features.map(({ icon: Icon, title, desc, color }) => (
-              <div
-                key={title}
-                className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all"
-              >
-                <div className={`w-11 h-11 rounded-xl ${color} flex items-center justify-center mb-4`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-2">{title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-20 px-4">
-        <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Ready to study smarter?
-          </h2>
-          <p className="text-gray-500 mb-8">
-            Create a free account and generate your first quiz in under two minutes.
-          </p>
           <Link to="/register">
-            <Button size="lg" className="shadow-md">
-              Get started — it&apos;s free
-            </Button>
+            <Button size="lg">Make your first quiz</Button>
           </Link>
-        </div>
-      </section>
+        </section>
+      </main>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-100 py-8 px-4">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-md flex items-center justify-center">
-              <BookOpen className="w-3 h-3 text-white" />
-            </div>
-            <span className="text-sm font-semibold text-gray-700">AdaptQuiz</span>
-          </div>
-          <p className="text-xs text-gray-400">
-            © {new Date().getFullYear()} AdaptQuiz. All rights reserved.
-          </p>
+      <footer className="border-t border-rule">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <Logo className="scale-90 origin-left" />
+          <p className="text-sm text-ink-muted">© {new Date().getFullYear()} AdaptQuiz</p>
         </div>
       </footer>
     </div>
