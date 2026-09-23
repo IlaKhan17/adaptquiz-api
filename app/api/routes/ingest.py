@@ -13,6 +13,8 @@ _ALLOWED_CONTENT_TYPES = {
     "text/plain",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
+# Browsers often send an empty or generic type (e.g. for .docx), so the extension also counts
+_ALLOWED_EXTENSIONS = (".pdf", ".txt", ".docx")
 
 
 @router.post("", response_model=IngestResponse, status_code=201)
@@ -24,6 +26,7 @@ async def ingest_file(
 ) -> IngestResponse:
     """Upload a PDF, DOCX, or plain-text file to be chunked and indexed for quiz generation."""
     content_type = (file.content_type or "").split(";")[0].strip().lower()
-    if content_type not in _ALLOWED_CONTENT_TYPES:
+    has_allowed_ext = (file.filename or "").lower().endswith(_ALLOWED_EXTENSIONS)
+    if content_type not in _ALLOWED_CONTENT_TYPES and not has_allowed_ext:
         raise HTTPException(status_code=415, detail="Only PDF, DOCX, and .txt files are supported.")
     return await ingest_document(file, subject, current_user.id, db)
