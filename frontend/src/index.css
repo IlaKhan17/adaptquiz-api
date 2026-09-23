@@ -8,23 +8,79 @@
   }
 
   html {
-    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    font-family: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-desk text-ink;
     margin: 0;
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+
+  :focus-visible {
+    outline: 3px solid #2340B8;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: #FFE45C;
+    color: #1B2A4A;
   }
 }
 
-@layer utilities {
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+@layer components {
+  /* A sheet of paper sitting on the desk */
+  .sheet {
+    @apply bg-paper border border-rule shadow-sheet;
+    border-radius: 6px;
   }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
+
+  /* Exam paper: faint ruled lines behind the writing area */
+  .ruled {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 31px,
+      #E6EAF1 31px,
+      #E6EAF1 32px
+    );
+  }
+
+  /* Highlighter stroke behind a word — sits under the text, slightly uneven */
+  .hl {
+    background: linear-gradient(
+      100deg,
+      rgba(255, 228, 92, 0) 0.5%,
+      rgba(255, 228, 92, 0.95) 2%,
+      rgba(255, 228, 92, 0.85) 96%,
+      rgba(255, 228, 92, 0) 99%
+    );
+    padding: 0 0.15em;
+    margin: 0 -0.05em;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+
+  .field {
+    @apply w-full rounded-md border border-rule bg-paper px-3.5 py-2.5 text-base text-ink placeholder:text-ink-faint transition-colors;
+    @apply hover:border-ink-faint focus:border-pen focus:outline-none focus:ring-2 focus:ring-pen/25;
+  }
+
+  .field-label {
+    @apply block text-sm font-bold text-ink mb-1.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

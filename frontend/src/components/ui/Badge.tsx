@@ -7,24 +7,19 @@ interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 }
 
 const variants: Record<BadgeVariant, string> = {
-  default: "bg-gray-100 text-gray-700",
-  success: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  warning: "bg-amber-50 text-amber-700 border border-amber-200",
-  error: "bg-red-50 text-red-700 border border-red-200",
-  indigo: "bg-indigo-50 text-indigo-700 border border-indigo-200",
-  violet: "bg-violet-50 text-violet-700 border border-violet-200",
+  default: "bg-ink/[0.06] text-ink-soft",
+  success: "bg-right-wash text-right",
+  warning: "bg-highlight-soft text-ink",
+  error: "bg-marker-wash text-marker",
+  indigo: "bg-pen-wash text-pen",
+  violet: "bg-pen-wash text-pen",
 };
 
-export default function Badge({
-  variant = "default",
-  className,
-  children,
-  ...props
-}: BadgeProps) {
+export default function Badge({ variant = "default", className, children, ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium",
+        "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold",
         variants[variant],
         className
       )}

@@ -12,24 +12,20 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<Variant, string> = {
-  primary:
-    "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm disabled:bg-indigo-300",
+  primary: "bg-pen text-white hover:bg-pen-dark disabled:bg-pen/40",
   secondary:
-    "bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:bg-gray-50 disabled:text-gray-400",
-  ghost: "hover:bg-gray-100 text-gray-600 disabled:text-gray-300",
-  "ghost-invert":
-    "hover:bg-white/10 text-white border border-white/30 disabled:text-white/40",
-  danger: "bg-red-600 hover:bg-red-700 text-white disabled:bg-red-300",
-  outline:
-    "border border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-700 disabled:text-gray-400",
-  light:
-    "bg-white hover:bg-indigo-50 text-indigo-700 shadow-sm disabled:bg-gray-100 disabled:text-gray-400",
+    "bg-paper text-ink border border-rule hover:border-ink-faint disabled:text-ink-faint",
+  ghost: "text-ink-soft hover:bg-ink/5 hover:text-ink disabled:text-ink-faint",
+  "ghost-invert": "text-white border border-white/40 hover:bg-white/10 disabled:text-white/40",
+  danger: "bg-marker text-white hover:bg-marker/90 disabled:bg-marker/40",
+  outline: "border border-ink/25 text-ink hover:border-ink hover:bg-ink/[0.03] disabled:text-ink-faint",
+  light: "bg-highlight text-ink hover:bg-highlight/85 disabled:bg-highlight/40",
 };
 
 const sizes: Record<Size, string> = {
-  sm: "text-sm px-3 py-1.5 rounded-lg",
-  md: "text-sm px-4 py-2.5 rounded-lg",
-  lg: "text-base px-6 py-3 rounded-xl",
+  sm: "text-sm px-3 py-1.5 rounded-md",
+  md: "text-[0.95rem] px-4 py-2.5 rounded-md",
+  lg: "text-base px-6 py-3 rounded-md",
 };
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -49,8 +45,9 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     <button
       ref={ref}
       disabled={disabled || loading}
+      aria-busy={loading || undefined}
       className={cn(
-        "inline-flex items-center justify-center gap-2 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:pointer-events-none",
+        "inline-flex items-center justify-center gap-2 font-bold transition-colors disabled:pointer-events-none",
         variants[variant],
         sizes[size],
         fullWidth && "w-full",
@@ -59,24 +56,9 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       {...props}
     >
       {loading && (
-        <svg
-          className="animate-spin h-4 w-4"
-          viewBox="0 0 24 24"
-          fill="none"
-        >
-          <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="4"
-          />
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-          />
+        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
       )}
       {children}

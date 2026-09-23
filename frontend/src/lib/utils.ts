@@ -11,17 +11,15 @@ export function formatDate(iso: string): string {
 }
 
 export function gradeColor(grade: string): string {
-  if (grade === "A+" || grade === "A") return "text-emerald-600";
-  if (grade === "B") return "text-blue-600";
-  if (grade === "C") return "text-amber-600";
-  return "text-red-500";
+  if (grade === "A+" || grade === "A") return "text-right";
+  if (grade === "B" || grade === "C") return "text-ink";
+  return "text-marker";
 }
 
 export function gradeBg(grade: string): string {
-  if (grade === "A+" || grade === "A") return "bg-emerald-50 text-emerald-700 border-emerald-200";
-  if (grade === "B") return "bg-blue-50 text-blue-700 border-blue-200";
-  if (grade === "C") return "bg-amber-50 text-amber-700 border-amber-200";
-  return "bg-red-50 text-red-700 border-red-200";
+  if (grade === "A+" || grade === "A") return "bg-right-wash text-right border-right/20";
+  if (grade === "B" || grade === "C") return "bg-ink/[0.05] text-ink border-ink/10";
+  return "bg-marker-wash text-marker border-marker/20";
 }
 
 export function scoreToPercent(score: number): number {
@@ -29,7 +27,20 @@ export function scoreToPercent(score: number): number {
 }
 
 export function difficultyColor(difficulty: string): string {
-  if (difficulty === "easy") return "bg-emerald-50 text-emerald-700";
-  if (difficulty === "medium") return "bg-amber-50 text-amber-700";
-  return "bg-red-50 text-red-700";
+  if (difficulty === "easy") return "bg-right-wash text-right";
+  if (difficulty === "medium") return "bg-highlight-soft text-ink";
+  return "bg-marker-wash text-marker";
+}
+
+/** Human names for question formats, used everywhere they're shown. */
+export const QUESTION_TYPE_LABELS: Record<string, string> = {
+  mcq: "Multiple choice",
+  short_answer: "Short answer",
+  true_false: "True or false",
+  fill_blank: "Fill in the blank",
+};
+
+export function errorDetail(err: unknown, fallback: string): string {
+  const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+  return typeof detail === "string" && detail ? detail : fallback;
 }
