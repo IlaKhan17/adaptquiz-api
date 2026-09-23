@@ -10,6 +10,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.routes import auth, documents, eval, health, ingest, quiz, session
 from app.config import settings
+from app.core.embedder import get_embeddings
 from app.core.vector_store import get_or_create_store
 from app.db.session import create_tables
 
@@ -21,8 +22,10 @@ async def lifespan(app: FastAPI):
     os.makedirs("data", exist_ok=True)
     await create_tables()
     # Load the embedding model and FAISS index before serving, so the first upload
-    # doesn't pay a ~15s cold start (the health check holds traffic until this finishes)
+    # doesn't pay a ~15s cold start (the health check holds traffic until this finishes).
+    # Loading an existing index doesn't run the model, so embed once to warm it up too.
     await asyncio.to_thread(get_or_create_store)
+    await asyncio.to_thread(get_embeddings().embed_query, "warm up")
     yield
 
 
