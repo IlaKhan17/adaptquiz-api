@@ -38,6 +38,16 @@ def test_ingest_docx(client, auth):
     assert resp.json()["chunks_created"] > 0
 
 
+def test_generic_content_type_accepted_by_extension(client, auth):
+    """Browsers can send application/octet-stream for .docx/.txt — the extension decides."""
+    resp = client.post(
+        "/api/v1/ingest",
+        headers=auth,
+        files={"file": ("notes.txt", STUDY_TEXT.encode(), "application/octet-stream")},
+    )
+    assert resp.status_code == 201, resp.text
+
+
 def test_unsupported_content_type(client, auth):
     resp = client.post(
         "/api/v1/ingest", headers=auth, files={"file": ("x.png", b"\x89PNG", "image/png")}

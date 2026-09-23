@@ -51,6 +51,6 @@ frontend/                  # React app (Vite dev server proxies /api → localho
 - MCQ and true/false are graded deterministically; short_answer and fill_blank go through the LLM rubric.
 - One shared FAISS index holds every document; chunks carry `doc_id` in metadata and
   `search_by_doc` filters on it after ranking the whole (flat) index.
-- Production: frontend on Vercel (`adaptquiz.ilarehman.com`), API at `api.ilarehman.com`.
+- Production: frontend on Vercel (`adaptquiz.ilarehman.com`), API on Railway (`adaptquiz-api-production.up.railway.app`, SQLite + FAISS on a volume at `/app/data`).
   Those origins are always allowed by CORS; `CORS_ORIGINS` adds extras.
 - Tests stub `call_llm` and web search, so they need no API key; they do load the local embedding model.

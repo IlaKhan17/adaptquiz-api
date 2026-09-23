@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -9,6 +10,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.routes import auth, documents, eval, health, ingest, quiz, session
 from app.config import settings
+from app.core.vector_store import get_or_create_store
 from app.db.session import create_tables
 
 logger = logging.getLogger(__name__)
@@ -18,6 +20,9 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     os.makedirs("data", exist_ok=True)
     await create_tables()
+    # Load the embedding model and FAISS index before serving, so the first upload
+    # doesn't pay a ~15s cold start (the health check holds traffic until this finishes)
+    await asyncio.to_thread(get_or_create_store)
     yield
 
 

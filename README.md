@@ -6,8 +6,8 @@
 
 ## Live Demo
 - App: https://adaptquiz.ilarehman.com
-- Swagger UI: https://api.ilarehman.com/docs
-- Health: https://api.ilarehman.com/api/v1/health
+- Swagger UI: https://adaptquiz-api-production.up.railway.app/docs
+- Health: https://adaptquiz-api-production.up.railway.app/api/v1/health
 
 ## What It Does
 
