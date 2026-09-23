@@ -30,10 +30,10 @@ export interface DocumentItem {
 export type Difficulty = "easy" | "medium" | "hard";
 export type QuizType = "mcq" | "short_answer" | "true_false" | "fill_blank";
 
+// The answer key is never sent with a quiz — correctness comes back in AnswerEvalResponse.
 export interface MCQOption {
   label: string;
   text: string;
-  is_correct: boolean;
 }
 
 export interface Question {
@@ -42,9 +42,6 @@ export interface Question {
   question_type: QuizType;
   difficulty: Difficulty;
   options: MCQOption[] | null;
-  correct_answer: string;
-  explanation: string;
-  source_chunk: string;
   topic_tag: string;
 }
 
@@ -92,6 +89,7 @@ export interface AnswerEvalResponse {
   score_percentage: number;
   rubric_feedback: FeedbackItem[];
   correct_answer: string;
+  correct_option_label: string | null;
   detailed_explanation: string;
   improvement_tip: string;
   knowledge_gap_tags: string[];

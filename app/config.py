@@ -6,6 +6,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _INSECURE_KEY = "change-me-in-production-use-32-random-bytes"
 
+# Production frontends — always allowed, so a stale CORS_ORIGINS in the environment can't lock them out
+_DEFAULT_CORS_ORIGINS = ["https://adaptquiz.ilarehman.com", "https://ilarehman.com"]
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
@@ -22,9 +25,12 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
 
-    # CORS — comma-separated origins, e.g. "https://app.example.com,https://www.app.example.com"
-    # Use "*" only for local development; set explicit origins in production.
-    cors_origins: str = "*"
+    # CORS — extra comma-separated origins on top of _DEFAULT_CORS_ORIGINS,
+    # e.g. "http://localhost:5173". "*" allows any origin (local development only).
+    cors_origins: str = ""
+
+    # Uploads
+    max_upload_mb: int = 20
 
     # RAG
     faiss_index_path: str = "./data/faiss"
@@ -39,7 +45,12 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list[str]:
         if self.cors_origins.strip() == "*":
             return ["*"]
-        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+        extra = [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+        return _DEFAULT_CORS_ORIGINS + [o for o in extra if o not in _DEFAULT_CORS_ORIGINS]
+
+    @property
+    def max_upload_bytes(self) -> int:
+        return self.max_upload_mb * 1024 * 1024
 
     @model_validator(mode="after")
     def warn_insecure_defaults(self) -> "Settings":

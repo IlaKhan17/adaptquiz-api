@@ -3,7 +3,7 @@ import json
 from uuid import uuid4
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.llm import call_llm
@@ -21,6 +21,7 @@ from app.schemas.quiz import (
     QuizGenerateRequest,
     QuizResponse,
     QuizType,
+    StudentQuestion,
 )
 
 _CONTEXT_SEPARATOR = "\n\n---\n\n"
@@ -133,7 +134,7 @@ async def generate_quiz(
         doc_id=request.doc_id,
         topic=request.topic,
         difficulty=request.difficulty,
-        questions=questions,
+        questions=[StudentQuestion.from_question(q) for q in questions],
         total_questions=len(questions),
         session_id=session_id,
     )
@@ -156,7 +157,7 @@ async def get_quiz_by_id(quiz_id: str, user_id: str, db: AsyncSession) -> QuizRe
         doc_id=doc.doc_id if doc else "",
         topic=quiz.topic,
         difficulty=Difficulty(quiz.difficulty),
-        questions=[_db_to_schema(q) for q in db_questions],
+        questions=[StudentQuestion.from_question(_db_to_schema(q)) for q in db_questions],
         total_questions=len(db_questions),
         session_id=session.session_id if session else "",
     )
@@ -182,23 +183,26 @@ async def get_session_quiz(session_id: str, user_id: str, db: AsyncSession) -> Q
         doc_id=doc.doc_id if doc else "",
         topic=quiz.topic,
         difficulty=Difficulty(quiz.difficulty),
-        questions=[_db_to_schema(q) for q in db_questions],
+        questions=[StudentQuestion.from_question(_db_to_schema(q)) for q in db_questions],
         total_questions=len(db_questions),
         session_id=session_id,
     )
 
 
 async def list_user_quizzes(user_id: str, db: AsyncSession) -> list[dict]:
-    quizzes = (
-        await db.execute(
-            select(Quiz).where(Quiz.user_id == user_id).order_by(Quiz.created_at.desc())
+    rows = await db.execute(
+        select(Quiz, Document, QuizSession)
+        .outerjoin(Document, Document.id == Quiz.document_id)
+        .outerjoin(
+            QuizSession,
+            and_(QuizSession.quiz_id == Quiz.id, QuizSession.user_id == user_id),
         )
-    ).scalars().all()
+        .where(Quiz.user_id == user_id)
+        .order_by(Quiz.created_at.desc())
+    )
 
     items = []
-    for quiz in quizzes:
-        doc = (await db.execute(select(Document).where(Document.id == quiz.document_id))).scalar_one_or_none()
-        session = (await db.execute(select(QuizSession).where(QuizSession.quiz_id == quiz.id, QuizSession.user_id == user_id))).scalar_one_or_none()
+    for quiz, doc, session in rows.all():
         items.append({
             "quiz_id": quiz.quiz_id,
             "session_id": session.session_id if session else "",
