@@ -68,13 +68,16 @@ def get_chunks_by_doc_id(store: FAISS, doc_id: str) -> list[dict]:
 
 
 def search_by_doc(store: FAISS, query: str, doc_id: str, k: int = 10) -> list[dict]:
-    """Semantic search limited to a specific document."""
-    total = len(store.docstore._dict)
-    fetch_k = max(k * 5, min(total, 200))
-    results = store.similarity_search_with_score(query, k=fetch_k)
-    filtered = [
+    """Semantic search limited to a specific document.
+
+    Ranks every vector before filtering by doc_id, so a document's best chunks are never
+    crowded out by other users' documents. The index is a flat (brute-force) index, so
+    searching all of it costs the same as searching the top few hundred.
+    """
+    results = store.similarity_search_with_score(
+        query, k=k, filter={"doc_id": doc_id}, fetch_k=store.index.ntotal
+    )
+    return [
         {"text": doc.page_content, "metadata": doc.metadata, "score": float(score)}
         for doc, score in results
-        if doc.metadata.get("doc_id") == doc_id
     ]
-    return filtered[:k]

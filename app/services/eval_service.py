@@ -86,6 +86,7 @@ def _evaluate_mcq(request: AnswerSubmitRequest, question: DBQuestion) -> AnswerE
             FeedbackItem(criterion="Accuracy", score=score, comment=accuracy_comment),
         ],
         correct_answer=correct_text,
+        correct_option_label=correct_label or None,
         detailed_explanation=question.explanation,
         improvement_tip="" if is_correct else "Review this concept and try to understand why the other options are incorrect.",
         knowledge_gap_tags=[] if is_correct else ([question.topic_tag] if question.topic_tag else []),

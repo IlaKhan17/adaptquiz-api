@@ -7,6 +7,7 @@ from fastapi import HTTPException, UploadFile
 from pypdf import PdfReader
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.core.chunker import chunk_text
 from app.core.vector_store import add_texts_and_save
 from app.models.document import Document
@@ -54,7 +55,12 @@ async def ingest_document(
     user_id: str,
     db: AsyncSession,
 ) -> IngestResponse:
-    raw_bytes = await file.read()
+    raw_bytes = await file.read(settings.max_upload_bytes + 1)
+    if len(raw_bytes) > settings.max_upload_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File is too large. Maximum upload size is {settings.max_upload_mb} MB.",
+        )
     filename = file.filename or "upload"
 
     text = _clean_extracted_text(_extract_text(raw_bytes, filename))

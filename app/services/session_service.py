@@ -1,7 +1,7 @@
 from collections import Counter
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.quiz import Question as DBQuestion
@@ -38,7 +38,8 @@ async def get_session_report(
     answers_by_qid = {a.question_id: a for a in answers}
 
     answered = len(answers)
-    overall_score = sum(a.score for a in answers) / answered if answered else 0.0
+    # Round before grading so the grade always matches the score shown (0.7999… would otherwise be a B)
+    overall_score = round(sum(a.score for a in answers) / answered, 2) if answered else 0.0
     grade = _score_to_grade(overall_score)
 
     gap_counter: Counter = Counter()
@@ -57,7 +58,7 @@ async def get_session_report(
         total_questions=len(questions),
         answered=answered,
         correct_count=correct_count,
-        overall_score=round(overall_score, 2),
+        overall_score=overall_score,
         grade=grade,
         knowledge_gaps=knowledge_gaps,
         recommendation=_build_recommendation(overall_score, knowledge_gaps),
@@ -90,20 +91,27 @@ async def get_session_report(
 
 
 async def list_user_sessions(user_id: str, db: AsyncSession) -> list[dict]:
-    sessions = (
-        await db.execute(
-            select(QuizSession)
-            .where(QuizSession.user_id == user_id)
-            .order_by(QuizSession.created_at.desc())
+    answer_stats = (
+        select(
+            Answer.session_id,
+            func.count(Answer.id).label("answered"),
+            func.avg(Answer.score).label("avg_score"),
         )
-    ).scalars().all()
+        .group_by(Answer.session_id)
+        .subquery()
+    )
+    rows = await db.execute(
+        select(QuizSession, Quiz, answer_stats.c.answered, answer_stats.c.avg_score)
+        .outerjoin(Quiz, Quiz.id == QuizSession.quiz_id)
+        .outerjoin(answer_stats, answer_stats.c.session_id == QuizSession.id)
+        .where(QuizSession.user_id == user_id)
+        .order_by(QuizSession.created_at.desc())
+    )
 
     items = []
-    for s in sessions:
-        quiz = (await db.execute(select(Quiz).where(Quiz.id == s.quiz_id))).scalar_one_or_none()
-        answers = (await db.execute(select(Answer).where(Answer.session_id == s.id))).scalars().all()
-        answered = len(answers)
-        score = round(sum(a.score for a in answers) / answered, 2) if answered else None
+    for s, quiz, answered, avg_score in rows.all():
+        answered = answered or 0
+        score = round(float(avg_score), 2) if answered else None
         items.append({
             "session_id": s.session_id,
             "quiz_id": quiz.quiz_id if quiz else "",

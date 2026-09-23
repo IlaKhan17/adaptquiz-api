@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -23,6 +25,9 @@ class AnswerEvalResponse(BaseModel):
         description="Detailed per-criterion feedback from the AI grader"
     )
     correct_answer: str = Field(description="The expected correct answer for reference")
+    correct_option_label: Optional[str] = Field(
+        default=None, description="For MCQ questions, the label of the correct option (e.g. 'B')"
+    )
     detailed_explanation: str = Field(
         description="Full explanation of the correct answer and why the student's response was graded as it was"
     )

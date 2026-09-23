@@ -37,6 +37,36 @@ class Question(BaseModel):
     topic_tag: str = Field(description="Short topic or concept tag that categorises this question")
 
 
+class StudentMCQOption(BaseModel):
+    label: str = Field(description="Single-letter label for the option, e.g. 'A', 'B', 'C', 'D'")
+    text: str = Field(description="Display text for this answer choice")
+
+
+class StudentQuestion(BaseModel):
+    """A question as shown to the student — the answer key is never sent before an answer is graded."""
+
+    question_id: str = Field(description="Unique identifier for the question")
+    question_text: str = Field(description="The full text of the question presented to the student")
+    question_type: QuizType = Field(description="Format of the question (mcq, short_answer, true_false, fill_blank)")
+    difficulty: Difficulty = Field(description="Difficulty level of the question")
+    options: Optional[list[StudentMCQOption]] = Field(
+        default=None,
+        description="Answer choices for MCQ questions; null for other question types",
+    )
+    topic_tag: str = Field(description="Short topic or concept tag that categorises this question")
+
+    @classmethod
+    def from_question(cls, q: "Question") -> "StudentQuestion":
+        return cls(
+            question_id=q.question_id,
+            question_text=q.question_text,
+            question_type=q.question_type,
+            difficulty=q.difficulty,
+            options=[StudentMCQOption(label=o.label, text=o.text) for o in q.options] if q.options else None,
+            topic_tag=q.topic_tag,
+        )
+
+
 class QuizGenerateRequest(BaseModel):
     doc_id: str = Field(description="Identifier of the ingested document to generate the quiz from")
     topic: Optional[str] = Field(default=None, description="Optional specific topic or section to focus questions on")
@@ -66,6 +96,6 @@ class QuizResponse(BaseModel):
     doc_id: str = Field(description="Identifier of the source document")
     topic: Optional[str] = Field(default=None, description="Topic filter used when generating the quiz, if any")
     difficulty: Difficulty = Field(description="Difficulty level applied to the quiz")
-    questions: list[Question] = Field(description="Ordered list of questions in the quiz")
+    questions: list[StudentQuestion] = Field(description="Ordered list of questions in the quiz (no answer key)")
     total_questions: int = Field(description="Total number of questions in the quiz")
     session_id: str = Field(description="Session identifier to use when submitting answers for this quiz")

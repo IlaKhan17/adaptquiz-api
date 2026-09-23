@@ -50,10 +50,7 @@ class CatchExceptionMiddleware(BaseHTTPMiddleware):
 app.add_middleware(CatchExceptionMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://adaptquiz.ilarehman.com",
-        "https://ilarehman.com",
-    ],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],

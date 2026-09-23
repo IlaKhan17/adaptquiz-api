@@ -35,8 +35,9 @@ function MCQInput({
         let cls =
           "w-full text-left p-4 rounded-xl border-2 transition-all font-normal text-sm";
         if (feedback) {
-          if (opt.is_correct) cls += " border-emerald-500 bg-emerald-50 text-emerald-800";
-          else if (selected === opt.label && !opt.is_correct)
+          const isCorrect = opt.label === feedback.correct_option_label;
+          if (isCorrect) cls += " border-emerald-500 bg-emerald-50 text-emerald-800";
+          else if (selected === opt.label)
             cls += " border-red-400 bg-red-50 text-red-800";
           else cls += " border-gray-100 bg-gray-50 text-gray-500";
         } else if (selected === opt.label) {
